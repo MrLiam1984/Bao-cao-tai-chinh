@@ -2,287 +2,529 @@
 <html lang="vi">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Sổ tiền cá nhân</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Sổ tiền</title>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <style>
-:root{--bg:#eef3f4;--card:#fff;--ink:#12242b;--mute:#5d7078;--line:#d6e0e3;--pri:#0f766e;--bad:#c2410c;--warn:#d97706}
-@media(prefers-color-scheme:dark){:root{--bg:#0e1a1f;--card:#16262d;--ink:#e6f0f2;--mute:#8fa5ad;--line:#27404a;--pri:#2dd4bf;--bad:#fb923c;--warn:#fbbf24}}
+:root{--bg:#f3f5f8;--card:#fff;--ink:#101828;--mute:#667085;--line:#e1e6ee;--pri:#4f46e5;--on:#fff;--bad:#d92d20;--ok:#079455;--warn:#dc6803}
+@media(prefers-color-scheme:dark){:root{--bg:#0c111b;--card:#151c2a;--ink:#eef2f8;--mute:#98a2b3;--line:#273246;--pri:#818cf8;--on:#0c111b;--bad:#f97066;--ok:#47cd89;--warn:#fdb022}}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 "Be Vietnam Pro",system-ui,sans-serif}
-main{max-width:1020px;margin:0 auto;padding:20px 16px 60px}
+header{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:calc(10px + env(safe-area-inset-top)) 16px 10px;max-width:980px;margin:0 auto}
+header b{font-size:18px;font-weight:800}
+main{max-width:980px;margin:0 auto;padding:0 16px 100px}
 h2{margin:0 0 10px;font-size:16px}
-.hero{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:16px}
-.big{font-size:clamp(34px,8vw,56px);font-weight:800;letter-spacing:-.02em;line-height:1}
-.mute{color:var(--mute);font-size:13px}.ok{color:var(--pri);font-weight:600}.neg{color:var(--bad)}
-.grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));margin-bottom:16px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:0}
-.sec{margin-bottom:16px}
-.card b{display:block;font-size:21px;font-weight:700}
-.fund{border-left:5px solid var(--c)}
+.pane{display:none}.pane.on{display:block}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px}
+.sec{margin-bottom:14px}
+.hero{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:10px;margin-bottom:14px}
+.big{font-size:clamp(36px,9vw,58px);font-weight:800;letter-spacing:-.02em;line-height:1.05}
+.mute{color:var(--mute);font-size:13px}.neg{color:var(--bad)}.ok{color:var(--ok)}
+.grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));margin-bottom:14px}
+.card b.v{display:block;font-size:21px;font-weight:700}
+.card span.mute{display:block}
+.fund{border-top:4px solid var(--c);cursor:pointer}
+.fh{display:flex;align-items:center;gap:8px;margin-bottom:2px}
+.chip{display:inline-grid;place-items:center;width:32px;height:32px;border-radius:9px;font-size:18px;background:var(--bg)}
 .bar{height:6px;background:var(--line);border-radius:3px;margin:6px 0 2px;overflow:hidden}.bar i{display:block;height:100%}
-form{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));align-items:end}
+form.g{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));align-items:end}
 label{display:grid;gap:3px;font-size:13px;color:var(--mute)}
-input,select,button{font:inherit;padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)}
+label.chk{display:flex;align-items:center;gap:8px}
+input,select,button,textarea{font:inherit;padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:var(--bg);color:var(--ink)}
+input[type=color]{padding:2px;height:38px}
+textarea{width:100%;resize:vertical}
+.aiok{padding:5px 0;border-bottom:1px solid var(--line);font-size:14px}
 input:focus-visible,select:focus-visible,button:focus-visible{outline:2px solid var(--pri);outline-offset:1px}
-button{cursor:pointer;background:var(--pri);color:var(--bg);border:0;font-weight:600}
+button{cursor:pointer;background:var(--pri);color:var(--on);border:0;font-weight:600}
 button.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
-.row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
-.charts{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));margin-bottom:16px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px}
+.mrow,.tx{display:flex;align-items:center;gap:10px;padding:10px 4px;border-bottom:1px solid var(--line);cursor:pointer}
+.mrow>div,.tx>div{flex:1;min-width:0}.mrow b,.tx b{display:block;font-weight:600;overflow:hidden;text-overflow:ellipsis}
+.charts{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(310px,1fr));margin-bottom:14px}
 .cv{position:relative;height:260px}
-.tw{overflow-x:auto}
-table{width:100%;border-collapse:collapse;font-size:14px}
-th,td{padding:8px 6px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
-td.n,th.n{text-align:right}
-td button{padding:3px 8px;background:transparent;color:var(--bad);border:1px solid var(--line)}
-.warn{border:1px solid var(--bad);color:var(--bad);border-radius:8px;padding:8px 12px;margin-bottom:12px;display:none;background:var(--card)}
-summary{cursor:pointer;font-weight:600}
+.alert{border:1px solid var(--bad);color:var(--bad);border-radius:10px;padding:8px 12px;margin-bottom:8px;background:var(--card);font-size:14px}
+nav{position:fixed;left:0;right:0;bottom:0;display:flex;justify-content:space-around;background:var(--card);border-top:1px solid var(--line);padding:6px 4px calc(6px + env(safe-area-inset-bottom));z-index:5}
+nav button{background:none;color:var(--mute);display:grid;justify-items:center;font-size:11px;padding:4px 10px;border-radius:8px}
+nav button span{font-size:20px;line-height:1.2}nav button.on{color:var(--pri)}
+dialog{border:1px solid var(--line);border-radius:14px;background:var(--card);color:var(--ink);width:min(440px,94vw);padding:18px}
+dialog::backdrop{background:#0008}
+#dbody{display:grid;gap:10px;max-height:60vh;overflow:auto;margin:12px 0}
 </style>
 </head>
 <body>
+<header><b>Sổ tiền</b><span id="cstat" class="mute"></span></header>
 <main>
-<div class="hero">
-  <div><div class="mute">Tiền mặt đang có</div><div class="big" id="cash">0đ</div></div>
-  <div style="text-align:right"><div id="check" class="ok"></div><div class="mute" id="asof"></div></div>
-</div>
 
-<div class="card sec">
-  <div id="cstat" class="mute"></div>
-  <form id="authform" style="margin-top:8px" onsubmit="return false">
-    <label>Email<input id="em" type="email" autocomplete="username"></label>
-    <label>Mật khẩu (từ 6 ký tự)<input id="pw" type="password" autocomplete="current-password"></label>
-    <button type="button" id="login">Đăng nhập</button>
-    <button type="button" id="signup" class="ghost">Tạo tài khoản</button>
-  </form>
-  <button class="ghost" id="logout" style="display:none;margin-top:8px">Đăng xuất</button>
-</div>
-<div class="warn" id="warn"></div>
+<section class="pane on" id="p-home">
+  <div class="card hero"><div><span class="mute">Tiền mặt đang có</span><div class="big" id="cash"></div><div class="mute" id="net"></div></div><div class="mute" id="per"></div></div>
+  <div id="alerts"></div>
+  <div class="card sec" id="empty" style="display:none"><h2>Chào mừng, hãy bắt đầu</h2>
+    <p class="mute">Sổ này tự điều chỉnh theo bạn: quỹ, hạng mục, nút ghi nhanh và công nợ đều thêm, sửa, xóa được.</p>
+    <div class="row"><button id="tplb">Dùng bộ quỹ gợi ý</button><button class="ghost" id="newf">Tự tạo quỹ</button></div></div>
+  <div class="grid" id="stats"></div>
+  <div class="card sec" id="aic"><h2>✨ Trợ lý AI</h2>
+    <textarea id="ait" rows="2" placeholder="Gõ tự nhiên, ví dụ: sáng ăn 20k, cafe 12k trừ quỹ tự do, hôm qua đổ xăng 75k, còn bao nhiêu tiền tiêu được?"></textarea>
+    <div class="row" style="margin:8px 0 0"><button id="aigo">Ghi bằng AI</button><button class="ghost" id="aimic" style="display:none">🎤 Nói</button><span class="mute">Ctrl+Enter để gửi</span></div>
+    <div id="aires" style="margin-top:10px"></div></div>
+  <div class="card sec"><h2>Ghi nhanh</h2><div class="row" id="qb"></div><button class="ghost" id="more">+ Giao dịch khác</button></div>
+  <div class="grid" id="funds"></div>
+  <div class="card sec" id="debtc" style="display:none"><h2>Công nợ đang có</h2><div id="debts"></div></div>
+  <div class="card sec"><h2>Đối chiếu tiền mặt</h2>
+    <div class="row"><input id="real" placeholder="Tiền mặt thực tế (vd 868k)" autocomplete="off"><button class="ghost" id="rc">Đối chiếu</button></div><div id="rres"></div></div>
+</section>
 
-<div class="grid" id="info"></div>
-<div class="grid" id="funds"></div>
-
-<div class="card sec">
-  <h2>Thêm giao dịch</h2>
-  <div class="row" id="qb"></div>
-  <form id="f">
+<section class="pane" id="p-tx">
+  <div class="card sec"><h2>Thêm giao dịch</h2>
+  <form class="g" id="f">
     <label>Ngày<input type="date" id="date" required></label>
-    <label>Loại<select id="type">
-      <option value="chi">Chi tiêu</option><option value="thu">Thu nhập</option><option value="chuyen">Chuyển giữa quỹ</option>
-      <option value="no">Ghi nợ ăn trưa (chưa trả)</option><option value="tranno">Trả nợ ăn trưa</option><option value="tk">Chuyển tiết kiệm</option>
-    </select></label>
+    <label>Loại<select id="type"><option value="chi">Chi tiêu</option><option value="thu">Thu nhập</option><option value="chuyen">Chuyển giữa quỹ</option><option value="no">Ghi nợ (chưa trả tiền)</option><option value="tranno">Trả nợ hoặc nhận lại tiền</option></select></label>
     <label id="lc">Hạng mục<select id="cat"></select></label>
-    <label id="lf">Trừ từ quỹ<select id="from"></select></label>
-    <label id="lt">Cộng vào quỹ<select id="to"></select></label>
-    <label>Số tiền (vd 20k, 35000)<input id="amt" required autocomplete="off"></label>
-    <label>Nội dung<input id="note" placeholder="Ăn sáng, xăng..."></label>
+    <label id="ld">Công nợ<select id="debt"></select></label>
+    <label id="lf">Quỹ chi / trả<select id="from"></select></label>
+    <label id="lt">Quỹ nhận<select id="to"></select></label>
+    <label>Số tiền (vd 20k, 1tr)<input id="amt" autocomplete="off" required></label>
+    <label>Nội dung<input id="note" autocomplete="off"></label>
     <button>Ghi sổ</button>
-  </form>
-</div>
+  </form></div>
+  <div class="card"><div class="row"><input id="fq" placeholder="Tìm nội dung, hạng mục"><select id="ffund"></select><select id="fper"><option value="cur">Kỳ lương này</option><option value="all">Tất cả</option></select></div>
+  <div id="txl"></div></div>
+</section>
 
-<div class="card sec">
-  <h2>Đối chiếu cuối ngày</h2>
-  <div class="row" style="margin:0;align-items:center">
-    <input id="real" placeholder="Tiền mặt thực tế (vd 868k)" autocomplete="off">
-    <button class="ghost" id="rc">Đối chiếu</button>
-    <span id="rres"></span>
+<section class="pane" id="p-manage">
+  <div class="card sec"><div class="row"><h2 style="margin:0;flex:1">Quỹ</h2><button data-add="fund">+ Thêm quỹ</button></div><div class="mute">Chạm vào một dòng để sửa tên, màu, kế hoạch, số dư, hạn mức ngày hoặc xóa.</div><div id="mf"></div></div>
+  <div class="card sec"><div class="row"><h2 style="margin:0;flex:1">Hạng mục chi</h2><button data-add="cat">+ Thêm hạng mục</button></div><div id="mc"></div></div>
+  <div class="card sec"><div class="row"><h2 style="margin:0;flex:1">Công nợ</h2><button data-add="debt">+ Thêm công nợ</button></div><div class="mute">Mình nợ ai, hoặc ai nợ mình. Ghi nợ không làm tiền mặt thay đổi.</div><div id="md"></div></div>
+  <div class="card sec"><div class="row"><h2 style="margin:0;flex:1">Nút ghi nhanh</h2><button data-add="quick">+ Thêm nút</button></div><div id="mq"></div></div>
+</section>
+
+<section class="pane" id="p-report">
+  <div class="row"><select id="rp"></select></div>
+  <div class="grid" id="rsum"></div>
+  <div class="charts">
+    <div class="card"><h2>Chi theo hạng mục</h2><div class="cv"><canvas id="c1"></canvas></div></div>
+    <div class="card"><h2>Chi mỗi ngày</h2><div class="cv"><canvas id="c2"></canvas></div></div>
+    <div class="card"><h2>Kế hoạch và đã chi theo quỹ</h2><div class="cv"><canvas id="c3"></canvas></div></div>
+    <div class="card"><h2>Thu và chi các kỳ gần đây</h2><div class="cv"><canvas id="c4"></canvas></div></div>
+    <div class="card"><h2>Tiền mặt theo thời gian</h2><div class="cv"><canvas id="c5"></canvas></div></div>
   </div>
-</div>
+</section>
 
-<div class="row">
-  <button id="bsal">Nhận lương (chia theo kế hoạch)</button>
-  <button class="ghost" id="bnew">Chốt kỳ, mang số dư sang kỳ mới</button>
-  <button class="ghost" id="brst">Làm mới: nhập lại từ số thực tế</button>
-  <button class="ghost" id="exp">Xuất sao lưu</button>
-  <button class="ghost" id="imp">Nhập sao lưu</button>
-  <input type="file" id="file" accept=".json" hidden>
-</div>
-
-<details class="card sec"><summary>Cài đặt: kế hoạch chia quỹ, ngày lương, quy tắc ăn</summary>
-  <form id="set" style="margin-top:12px"></form><div class="mute" id="ptot" style="margin-top:8px"></div>
-</details>
-
-<div class="charts">
-  <div class="card"><h2>Chi theo hạng mục (kỳ này)</h2><div class="cv"><canvas id="c1"></canvas></div></div>
-  <div class="card"><h2>Chi mỗi ngày (14 ngày gần nhất)</h2><div class="cv"><canvas id="c2"></canvas></div></div>
-  <div class="card"><h2>Tiền mặt theo thời gian</h2><div class="cv"><canvas id="c3"></canvas></div></div>
-  <div class="card"><h2>Kế hoạch và đã chi theo quỹ (kỳ này)</h2><div class="cv"><canvas id="c4"></canvas></div></div>
-</div>
-
-<div class="card"><h2>Lịch sử giao dịch (80 gần nhất)</h2>
-<div class="tw"><table><thead><tr><th>Ngày</th><th>Nội dung</th><th>Hạng mục</th><th>Quỹ</th><th class="n">Số tiền</th><th></th></tr></thead><tbody id="tb"></tbody></table></div></div>
+<section class="pane" id="p-set">
+  <div class="card sec"><h2>Kỳ lương và số dư</h2>
+    <div class="row"><label>Ngày nhận lương mỗi tháng (1-28)<input id="pay" style="width:120px"></label></div>
+    <div class="row"><button id="bsal">Nhận lương, chia theo kế hoạch</button><button class="ghost" id="bnew">Chốt kỳ / làm mới số dư</button></div>
+    <div class="mute">Làm mới số dư: nhập lại số thực tế của từng quỹ khi sổ bị lệch hoặc tháng trước nhập không đủ. Giao dịch cũ được lưu, vẫn xem trong Báo cáo.</div></div>
+  <div class="card sec"><h2>Đồng bộ giữa các máy</h2>
+    <form class="g" id="authform" onsubmit="return false"><label>Email<input id="em" type="email" autocomplete="username"></label><label>Mật khẩu (từ 6 ký tự)<input id="pw" type="password" autocomplete="current-password"></label><button type="button" id="login">Đăng nhập</button><button type="button" id="signup" class="ghost">Tạo tài khoản</button></form>
+    <button class="ghost" id="logout" style="display:none">Đăng xuất</button></div>
+  <div class="card sec"><h2>✨ Trợ lý AI</h2>
+    <p class="mute" style="margin-top:0">Chọn hãng AI rồi dán API key của bạn (Gemini: lấy ở Google AI Studio, mục Get API key; Claude: lấy ở Claude Console). Key chỉ lưu trong trình duyệt của máy này, không đẩy lên GitHub hay đám mây, nên mỗi máy dán một lần. Nếu dùng gói miễn phí của Google, nội dung gửi đi có thể được Google dùng để cải thiện sản phẩm, bạn xem điều khoản của Google nếu ngại.</p>
+    <form class="g" id="aiform" onsubmit="return false">
+      <label>Hãng AI<select id="aiprov"><option value="gemini">Google Gemini</option><option value="claude">Anthropic Claude</option></select></label>
+      <label>API key<input id="aikey" type="password" autocomplete="off" placeholder="Dán key vào đây"></label>
+      <label>Mô hình (chọn gợi ý hoặc gõ tên khác)<input id="aimodel" list="aimodels" autocomplete="off"></label>
+      <datalist id="aimodels"></datalist>
+      <label class="chk"><input type="checkbox" id="aiconf">Cho xem lại trước khi ghi</label>
+    </form>
+    <label style="margin-top:10px">Quy tắc riêng để AI hiểu đúng (viết bằng lời của bạn, lưu cùng sổ và đồng bộ giữa các máy)<textarea id="airules" rows="5" placeholder="Ví dụ: Sáng 20k mỗi bữa. Trưa công ty 40k thì ghi nợ, không trừ tiền. Cafe luôn trừ quỹ tự do."></textarea></label>
+    <div class="row" style="margin-top:10px"><button id="aisave">Lưu</button><span class="mute" id="aisaved"></span></div></div>
+  <div class="card sec"><h2>Sao lưu và dữ liệu</h2>
+    <div class="row"><button class="ghost" id="exp">Xuất file sao lưu</button><button class="ghost" id="imp">Nhập file sao lưu</button><button class="ghost neg" id="wipe">Xóa tất cả, bắt đầu lại</button><input type="file" id="file" accept=".json" hidden></div></div>
+</section>
 </main>
+
+<nav id="nav">
+  <button data-t="home" class="on"><span>🏠</span>Tổng quan</button><button data-t="tx"><span>🧾</span>Giao dịch</button><button data-t="manage"><span>🗂️</span>Quản lý</button><button data-t="report"><span>📊</span>Báo cáo</button><button data-t="set"><span>⚙️</span>Cài đặt</button>
+</nav>
+
+<dialog id="dlg"><h3 id="dtitle" style="margin:0"></h3><div id="dbody"></div><div class="row" style="margin:0"><button id="dok">Lưu</button><button class="ghost" id="dcancel">Hủy</button><button class="ghost neg" id="ddel">Xóa</button></div></dialog>
 
 <script>
 const KEY='so-tien-v1';
-/* Muốn thêm quỹ hoặc hạng mục: sửa 3 hằng số dưới đây */
-const FUNDS=[['tro','Trọ'],['pc','PC'],['tien','Điện, nước, Wi-Fi, rác'],['xang','Xăng'],['xe','Bảo dưỡng xe'],['an','Ăn'],['nolunch','Trả ăn trưa công ty'],['sh','Đồ sinh hoạt'],['suckhoe','Sức khỏe'],['gd','Gia đình'],['tudo','Tự do']].map(([id,n],i)=>({id,n,c:`hsl(${i*33} 58% 48%)`}));
-const CATS=['Ăn sáng','Ăn trưa','Ăn tối/phát sinh','Cafe & nước','Xăng','Bảo dưỡng xe','Sức khỏe','Gia đình','Sinh hoạt','Cá nhân (cắt tóc...)','Hóa đơn','Khác'];
-const CF={'Ăn sáng':'an','Ăn trưa':'an','Ăn tối/phát sinh':'an','Xăng':'xang','Bảo dưỡng xe':'xe','Sức khỏe':'suckhoe','Gia đình':'gd','Sinh hoạt':'sh','Hóa đơn':'tien'};
-const PLAN={tro:1500000,pc:1000000,tien:615000,xang:150000,xe:100000,an:1150000,nolunch:880000,sh:600000,suckhoe:100000,gd:700000,tudo:500000,sav:1705000};
-const TL={chi:'Chi',thu:'Thu nhập',luong:'Nhận lương',chuyen:'Chuyển quỹ',no:'Ghi nợ ăn trưa',tranno:'Trả nợ ăn trưa',tk:'Chuyển tiết kiệm',dc:'Điều chỉnh (chênh lệch chưa xác định nguồn)'};
+const PAL=['#4f46e5','#0891b2','#059669','#d97706','#dc2626','#9333ea','#db2777','#65a30d','#0d9488','#ea580c','#2563eb','#7c3aed'];
+const TPL={funds:[['an','🍜','Ăn uống',1150000],['nha','🏠','Nhà ở',1500000],['dien','💡','Điện nước, internet',600000],['xe','⛽','Đi lại, xe',250000],['sk','💊','Sức khỏe',100000],['gd','👪','Gia đình',500000],['tudo','🎈','Tự do',500000],['tk','💰','Tiết kiệm',1500000]],cats:[['Ăn uống','an'],['Nhà ở','nha'],['Hóa đơn','dien'],['Đi lại','xe'],['Sức khỏe','sk'],['Gia đình','gd'],['Giải trí','tudo'],['Khác','tudo']]};
+const TL={chi:'Chi',thu:'Thu nhập',luong:'Nhận lương',chuyen:'Chuyển quỹ',no:'Ghi nợ',tranno:'Trả nợ hoặc nhận lại',dc:'Điều chỉnh'};
+const WD=['CN','T2','T3','T4','T5','T6','T7'];
 const $=i=>document.getElementById(i);
-const fmt=n=>(n<0?'-':'')+Math.abs(n).toLocaleString('vi-VN')+'đ';
-const k=v=>v/1000+'k';
+const fmt=n=>(n<0?'-':'')+Math.abs(Math.round(n)).toLocaleString('vi-VN')+'đ';
 const parse=s=>{const m=String(s).trim().toLowerCase().replace(/[.,\s]/g,'').match(/^(-?\d+)(k|tr)?$/);return m?+m[1]*(m[2]=='k'?1e3:m[2]=='tr'?1e6:1):NaN};
 const dstr=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 const today=()=>dstr(new Date());
 const vd=d=>d.split('-').reverse().join('/');
-const fn=id=>(FUNDS.find(x=>x.id==id)||{}).n||'—';
-const hue=i=>`hsl(${i*37} 60% 50%)`;
+const rid=()=>'x'+Math.random().toString(36).slice(2,8);
+const css=v=>getComputedStyle(document.body).getPropertyValue(v).trim();
+const RULES0='Sáng ăn 20k mỗi bữa (Thứ 2 đến Thứ 7), trừ quỹ Ăn. Trưa Thứ 2 đến Thứ 7 (trừ Thứ 5) thường ăn cơm công ty 40k: ghi nợ Ăn trưa công ty, không trừ tiền. Nếu tôi báo trưa 30k hoặc 35k thì là không ăn công ty: ghi chi, trừ quỹ Ăn, không ghi nợ. Trưa Thứ 5 tối đa 30k. Chủ nhật tối đa 50k cả ngày. Tối các ngày trong tuần thường không ăn. Khoản nào tôi không nói rõ quỹ thì hỏi lại.';
+const blank=()=>({v:3,pay:5,open:{date:today(),f:{},d:{}},funds:[],cats:[],debts:[],quick:[],txs:[],hist:[],aiRules:''});
 
 function norm(s){
-  if(s&&s.v==2)return s;
-  const o=(s&&s.open)||{},f={};FUNDS.forEach(x=>f[x.id]=0);f.an=o.an||0;f.xang=o.xang||0;f.tudo=o.tudo||0;
-  return{v:2,open:{date:o.date||today(),f,sav:o.sav||0,debt:o.debt||0},txs:(s&&s.txs)||[],plan:{...PLAN},pay:5,goal:5100000,rules:{sang:20000,truaCT:40000,thu5:30000,cn:50000},arch:[]};
+  if(!s)return blank();
+  if(s.v==3){if(s.aiRules===undefined)s.aiRules=(s.debts||[]).some(d=>d.id=='d1')?RULES0:'';return s}
+  const o=s.open||{},of=o.f||{an:o.an||0,xang:o.xang||0,tudo:o.tudo||0},pl=s.plan||{},r=s.rules||{sang:20000,truaCT:40000,thu5:30000,cn:50000};
+  const FN=[['tro','🏠','Trọ'],['pc','💻','PC'],['tien','💡','Điện, nước, Wi-Fi, rác'],['xang','⛽','Xăng'],['xe','🛵','Bảo dưỡng xe'],['an','🍜','Ăn'],['nolunch','🍱','Trả ăn trưa công ty'],['sh','🧴','Đồ sinh hoạt'],['suckhoe','💊','Sức khỏe'],['gd','👪','Gia đình'],['tudo','💸','Tự do']];
+  const funds=FN.map(([id,e,n],i)=>({id,e,n,c:PAL[i],plan:pl[id]||0,free:id=='tudo',lim:id=='an'?[r.cn,r.sang,r.sang,r.sang,r.sang+r.thu5,r.sang,r.sang]:null}));
+  funds.push({id:'tk',e:'💰',n:'Tiết kiệm',c:PAL[11],plan:pl.sav||0,save:true,goal:s.goal||5100000});
+  const f={...of};f.tk=o.sav||0;
+  const cs=[['Ăn sáng','an'],['Ăn trưa','an'],['Ăn tối/phát sinh','an'],['Cafe & nước','tudo'],['Xăng','xang'],['Bảo dưỡng xe','xe'],['Sức khỏe','suckhoe'],['Gia đình','gd'],['Sinh hoạt','sh'],['Cá nhân (cắt tóc...)','tudo'],['Hóa đơn','tien'],['Khác','tudo']];
+  const txs=(s.txs||[]).map(t=>{t={...t};if(t.type=='tk'){t.type='chuyen';t.to='tk'}
+    if(t.type=='luong'){t.alloc={...t.alloc};t.alloc.tk=(t.alloc.tk||0)+(t.sav||0);delete t.sav}
+    if(t.type=='no'||t.type=='tranno')t.debt='d1';return t});
+  return{v:3,pay:s.pay||5,open:{date:o.date||today(),f,d:{d1:o.debt||0}},funds,cats:cs.map(([n,f])=>({n,f})),debts:[{id:'d1',who:'Ăn trưa công ty',dir:'owe'}],
+    quick:[{id:'q1',t:'Sáng '+r.sang/1000+'k',type:'chi',amt:r.sang,from:'an',cat:'Ăn sáng',note:'Ăn sáng'},{id:'q2',t:'Trưa công ty '+r.truaCT/1000+'k (ghi nợ)',type:'no',amt:r.truaCT,debt:'d1',note:'Ăn trưa công ty'},{id:'q3',t:'Trưa Thứ 5 '+r.thu5/1000+'k',type:'chi',amt:r.thu5,from:'an',cat:'Ăn trưa',note:'Ăn trưa'}],txs,hist:[],aiRules:RULES0};
 }
 let S;try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){}
-S=norm(S||{open:{date:'2026-10-18',an:568000,xang:100000,tudo:200000,sav:1000000,debt:400000},txs:[]});
-const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}cloudPush()};
+S=norm(S);
+const persist=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}cloudPush()};
+const live=()=>S.funds.filter(x=>!x.off);
+const F=id=>S.funds.find(x=>x.id==id)||{n:'—',e:'',c:'#999'};
+const dirOf=id=>(S.debts.find(d=>d.id==id)||{}).dir;
+const whoOf=id=>(S.debts.find(d=>d.id==id)||{who:'—'}).who;
 
-function pstart(){const t=new Date(),p=S.pay||5;return dstr(new Date(t.getFullYear(),t.getMonth()-(t.getDate()<p?1:0),p))}
+function pr(i){const t=new Date(),p=S.pay||5,m=t.getMonth()-(t.getDate()<p?1:0)-i;return[dstr(new Date(t.getFullYear(),m,p)),i?dstr(new Date(t.getFullYear(),m+1,p-1)):'9999-12-31']}
 function daysLeft(){const t=new Date(),p=S.pay||5,n=new Date(t.getFullYear(),t.getMonth()+(t.getDate()<p?0:1),p);return Math.max(1,Math.ceil((n-new Date(t.getFullYear(),t.getMonth(),t.getDate()))/864e5))}
 
 function calc(){
-  const o=S.open,f={...o.f};FUNDS.forEach(x=>{if(f[x.id]==null)f[x.id]=0});
-  let sav=o.sav,debt=o.debt;const sum=()=>FUNDS.reduce((a,x)=>a+f[x.id],0);
-  let chk=sum();const ps=pstart();
-  const R={f,spent:{},cat:{},daily:{},inc:0,out:0,line:[[o.date,chk]]};FUNDS.forEach(x=>R.spent[x.id]=0);
-  const list=[...S.txs].sort((a,b)=>a.date.localeCompare(b.date)||a.id-b.id);
-  for(const t of list){
-    const a=t.amt,inP=t.date>=ps;
-    const spend=()=>{const c=t.cat||(t.type=='tranno'?'Trả nợ ăn trưa':'Khác');f[t.from]-=a;chk-=a;if(inP){R.spent[t.from]+=a;R.out+=a;R.cat[c]=(R.cat[c]||0)+a;R.daily[t.date]=(R.daily[t.date]||0)+a}};
-    if(t.type=='chi')spend();
-    else if(t.type=='tranno'){debt-=a;spend()}
-    else if(t.type=='thu'){f[t.to]+=a;chk+=a;if(inP)R.inc+=a}
-    else if(t.type=='luong'){for(const id in t.alloc)f[id]+=t.alloc[id];sav+=t.sav;chk+=a-t.sav;if(inP)R.inc+=a}
+  const f={...S.open.f},D={...S.open.d};S.funds.forEach(x=>f[x.id]=f[x.id]||0);S.debts.forEach(d=>D[d.id]=D[d.id]||0);
+  const cashOf=()=>S.funds.reduce((a,x)=>a+(x.save?0:f[x.id]),0),line=[[S.open.date,cashOf()]];
+  for(const t of [...S.txs].sort((a,b)=>a.date.localeCompare(b.date))){const a=t.amt;
+    if(t.type=='chi')f[t.from]-=a;
+    else if(t.type=='thu'||t.type=='dc')f[t.to]+=a;
+    else if(t.type=='luong'){for(const i in t.alloc)f[i]+=t.alloc[i]}
     else if(t.type=='chuyen'){f[t.from]-=a;f[t.to]+=a}
-    else if(t.type=='no')debt+=a;
-    else if(t.type=='tk'){f[t.from]-=a;sav+=a;chk-=a}
-    else if(t.type=='dc'){f[t.to]+=a;chk+=a}
-    R.line.push([t.date,sum()]);
+    else if(t.type=='no'){D[t.debt]+=a;if(dirOf(t.debt)=='owed'&&t.from)f[t.from]-=a}
+    else if(t.type=='tranno'){D[t.debt]-=a;if(dirOf(t.debt)=='owed')f[t.to]+=a;else f[t.from]-=a}
+    line.push([t.date,cashOf()]);
   }
-  return Object.assign(R,{cash:sum(),chk,sav,debt,list});
+  let net=S.funds.reduce((a,x)=>a+f[x.id],0);S.debts.forEach(d=>net+=(d.dir=='owed'?1:-1)*D[d.id]);
+  return{f,D,cash:cashOf(),net,line};
+}
+function stat(a,b){
+  const r={inc:0,out:0,cat:{},daily:{},fund:{}};
+  for(const t of [...S.hist,...S.txs]){if(t.date<a||t.date>b)continue;const A=t.amt;
+    if(t.type=='thu'||t.type=='luong')r.inc+=A;
+    else if(t.type=='chi'||(t.type=='tranno'&&dirOf(t.debt)=='owe')){const c=t.cat||(t.type=='tranno'?'Trả nợ':'Khác');r.out+=A;r.cat[c]=(r.cat[c]||0)+A;r.daily[t.date]=(r.daily[t.date]||0)+A;r.fund[t.from]=(r.fund[t.from]||0)+A}}
+  return r;
 }
 
-let ch={};
-function chart(id,cfg,legend){
-  const st=getComputedStyle(document.body);Chart.defaults.color=st.getPropertyValue('--ink');Chart.defaults.font.family='"Be Vietnam Pro",system-ui';
-  if(ch[id])ch[id].destroy();const ln=st.getPropertyValue('--line');
-  cfg.options={responsive:true,maintainAspectRatio:false,plugins:{legend:{display:!!legend}}};
-  if(cfg.type!='doughnut')cfg.options.scales={x:{grid:{color:ln}},y:{grid:{color:ln},ticks:{callback:v=>v/1000+'k'}}};
+/* ---------- hộp thoại nhập liệu dùng chung ---------- */
+const fh=f=>{const id='f_'+f.k,v=f.v==null?'':f.v;
+  if(f.t=='p')return`<p class="mute" style="margin:0">${f.l}</p>`;
+  if(f.t=='sel')return`<label>${f.l}<select id="${id}">${f.o.map(([a,b])=>`<option value="${a}"${a==f.v?' selected':''}>${b}</option>`).join('')}</select></label>`;
+  if(f.t=='chk')return`<label class="chk"><input type="checkbox" id="${id}"${f.v?' checked':''}>${f.l}</label>`;
+  return`<label>${f.l}<input id="${id}" type="${f.t=='color'?'color':f.t=='date'?'date':'text'}" value="${v}" autocomplete="off"></label>`};
+function ask(title,fields,ok,del){
+  const d=$('dlg');if(d.open)d.close();$('dtitle').textContent=title;$('dbody').innerHTML=fields.map(fh).join('');$('ddel').style.display=del?'':'none';
+  $('dok').onclick=()=>{const v={};for(const f of fields){if(f.t=='p')continue;const el=$('f_'+f.k);let x=f.t=='chk'?el.checked:el.value;
+    if(f.t=='num'){x=x.trim()==''&&f.opt?0:parse(x);if(isNaN(x))return alert('Số ở mục "'+f.l+'" chưa hợp lệ. Nhập ví dụ 20k hoặc 150000.')}v[f.k]=x}
+    d.close();if(ok(v)===false)d.showModal()};
+  $('ddel').onclick=()=>{d.close();del()};$('dcancel').onclick=()=>d.close();d.showModal();
+}
+const add=t=>{S.txs.push({id:rid(),...t});persist();render()};
+const fOpts=(extra)=>[...(extra?[['','(không chọn)']]:[]),...live().map(x=>[x.id,x.e+' '+x.n])];
+
+function editFund(id){
+  const x=id?F(id):null,R=calc();
+  ask(x?'Sửa quỹ':'Thêm quỹ',[
+    {k:'e',l:'Biểu tượng (emoji)',v:x?x.e:'💰'},{k:'n',l:'Tên quỹ',v:x?x.n:''},{k:'c',l:'Màu',t:'color',v:x?x.c:PAL[live().length%12]},
+    {k:'bal',l:x?'Số dư hiện tại (sửa sẽ tạo một dòng điều chỉnh)':'Số dư ban đầu',t:'num',opt:1,v:x?R.f[id]:0},
+    {k:'plan',l:'Kế hoạch mỗi kỳ lương (dùng khi Nhận lương, và làm mức chi dự kiến)',t:'num',opt:1,v:x?x.plan||0:0},
+    {k:'save',l:'Quỹ tiết kiệm (không tính vào tiền mặt)',t:'chk',v:x&&x.save},{k:'goal',l:'Mục tiêu (cho quỹ tiết kiệm)',t:'num',opt:1,v:x?x.goal||0:0},
+    {k:'free',l:'Quỹ tiêu tự do (nhận phần dư khi nhận lương, tính "tiêu được mỗi ngày")',t:'chk',v:x&&x.free},
+    {k:'lim',l:'Hạn mức chi mỗi ngày theo thứ: CN,T2,T3,T4,T5,T6,T7 (vd 50k,20k,20k,20k,50k,20k,20k). Một số = mọi ngày. Để trống = không giới hạn',v:x&&x.lim?x.lim.map(n=>n/1000+'k').join(','):''}
+  ],v=>{
+    if(!v.n.trim()){alert('Nhập tên quỹ.');return false}
+    let lim=null;if(v.lim.trim()){const a=v.lim.split(/[,;]/).map(parse);lim=a.length==1?Array(7).fill(a[0]):a.length==7?a:null;if(!lim||lim.some(isNaN)){alert('Hạn mức cần 1 số hoặc 7 số cách nhau bằng dấu phẩy.');return false}}
+    const o={e:v.e||'💰',n:v.n.trim(),c:v.c,plan:v.plan,save:v.save,goal:v.goal,free:v.free&&!v.save,lim};
+    if(o.free)S.funds.forEach(y=>y.free=false);
+    let f=x;if(x)Object.assign(x,o);else{f={id:rid(),...o};S.funds.push(f)}
+    const cur=x?R.f[x.id]:0;
+    if(v.bal!==cur)add({date:today(),type:'dc',amt:v.bal-cur,to:f.id,note:(x?'Điều chỉnh số dư ':'Số dư ban đầu ')+f.n});else{persist();render()}
+  },x&&(()=>delFund(x)));
+}
+function delFund(x){
+  const L=live().filter(y=>y.id!=x.id);if(!L.length)return alert('Cần giữ lại ít nhất một quỹ.');const b=calc().f[x.id];
+  ask('Xóa quỹ '+x.n,[{t:'p',l:'Giao dịch cũ vẫn được giữ.'+(b?' Số dư '+fmt(b)+' sẽ chuyển sang quỹ bạn chọn.':'')},{k:'to',l:'Chuyển số dư sang',t:'sel',o:L.map(y=>[y.id,y.e+' '+y.n]),v:L[0].id}],
+    v=>{if(b)S.txs.push({id:rid(),date:today(),type:'chuyen',amt:b,from:x.id,to:v.to,note:'Xóa quỹ '+x.n});x.off=true;x.free=false;persist();render()});
+}
+function editCat(i){
+  const c=i==null?null:S.cats[i];
+  ask(c?'Sửa hạng mục':'Thêm hạng mục',[{k:'n',l:'Tên hạng mục',v:c?c.n:''},{k:'f',l:'Quỹ thường trừ',t:'sel',o:fOpts(),v:c&&c.f}],v=>{
+    if(!v.n.trim()){alert('Nhập tên hạng mục.');return false}
+    if(c){S.txs.concat(S.hist).forEach(t=>{if(t.cat==c.n)t.cat=v.n.trim()});c.n=v.n.trim();c.f=v.f}else S.cats.push({n:v.n.trim(),f:v.f});persist();render()
+  },c&&(()=>{if(confirm('Xóa hạng mục này? Giao dịch cũ vẫn giữ tên hạng mục.')){S.cats.splice(i,1);persist();render()}}));
+}
+function editDebt(id){
+  const d=id?S.debts.find(x=>x.id==id):null;
+  ask(d?'Sửa công nợ':'Thêm công nợ',[{k:'who',l:'Tên (ví dụ: Ăn trưa công ty, Anh Nam)',v:d?d.who:''},{k:'dir',l:'Loại',t:'sel',o:[['owe','Mình nợ họ'],['owed','Họ nợ mình']],v:d&&d.dir},...(d?[]:[{k:'bal',l:'Số nợ hiện tại',t:'num',opt:1,v:0}])],v=>{
+    if(!v.who.trim()){alert('Nhập tên.');return false}
+    if(d){d.who=v.who.trim();d.dir=v.dir;persist();render()}else{const n={id:rid(),who:v.who.trim(),dir:v.dir};S.debts.push(n);if(v.bal)add({date:today(),type:'no',amt:v.bal,debt:n.id,note:'Số nợ ban đầu'});else{persist();render()}}
+  },d&&(()=>{if(calc().D[d.id])return alert('Công nợ này còn số dư. Hãy trả hết hoặc ghi giảm trước khi xóa.');S.debts=S.debts.filter(x=>x!=d);persist();render()}));
+}
+function editQuick(id){
+  const q=id?S.quick.find(x=>x.id==id):null;
+  ask(q?'Sửa nút ghi nhanh':'Thêm nút ghi nhanh',[
+    {k:'t',l:'Tên nút (vd Sáng 20k)',v:q?q.t:''},{k:'type',l:'Loại',t:'sel',o:[['chi','Chi tiêu'],['thu','Thu nhập'],['no','Ghi nợ']],v:q&&q.type},{k:'amt',l:'Số tiền',t:'num',v:q?q.amt:0},
+    {k:'from',l:'Quỹ (chi từ quỹ này, hoặc thu vào quỹ này)',t:'sel',o:fOpts(1),v:q&&q.from},{k:'cat',l:'Hạng mục (cho khoản chi)',t:'sel',o:[['','(không chọn)'],...S.cats.map(c=>[c.n,c.n])],v:q&&q.cat},
+    {k:'debt',l:'Công nợ (cho loại Ghi nợ)',t:'sel',o:[['','(không chọn)'],...S.debts.map(d=>[d.id,d.who])],v:q&&q.debt},{k:'note',l:'Nội dung ghi vào sổ',v:q?q.note:''}
+  ],v=>{
+    if(!v.t.trim()||!(v.amt>0)){alert('Cần tên nút và số tiền.');return false}
+    if(v.type!='no'&&!v.from){alert('Chọn quỹ cho nút này.');return false}if(v.type=='no'&&!v.debt){alert('Chọn công nợ cho nút Ghi nợ.');return false}
+    if(q)Object.assign(q,v);else S.quick.push({id:rid(),...v});persist();render()
+  },q&&(()=>{S.quick=S.quick.filter(x=>x!=q);persist();render()}));
+}
+function editTx(id){
+  const t=S.txs.find(x=>x.id==id)||S.hist.find(x=>x.id==id);if(!t)return;
+  const owed=t.type=='tranno'&&dirOf(t.debt)=='owed',fl=[{k:'date',l:'Ngày',t:'date',v:t.date},{k:'note',l:'Nội dung',v:t.note||''}];
+  if(t.type!='luong')fl.push({k:'amt',l:'Số tiền',t:'num',v:t.amt});
+  if(['chi','chuyen','no'].includes(t.type)||(t.type=='tranno'&&!owed))fl.push({k:'from',l:'Quỹ chi / trả',t:'sel',o:fOpts(t.type=='no'),v:t.from});
+  if(['thu','chuyen','dc'].includes(t.type)||owed)fl.push({k:'to',l:'Quỹ nhận',t:'sel',o:fOpts(),v:t.to});
+  if(t.type=='chi')fl.push({k:'cat',l:'Hạng mục',t:'sel',o:[['','(không chọn)'],...S.cats.map(c=>[c.n,c.n])],v:t.cat});
+  if(t.type=='luong')fl.push({t:'p',k:'p',l:'Khoản lương đã chia vào các quỹ. Muốn đổi số tiền, hãy xóa và nhập lại.'});
+  ask('Sửa giao dịch: '+TL[t.type],fl,v=>{
+    for(const k in v)t[k]=(k=='cat'||k=='from'||k=='to')?(v[k]||undefined):v[k];persist();render()
+  },()=>{if(confirm('Xóa giao dịch này?')){S.txs=S.txs.filter(x=>x!==t);S.hist=S.hist.filter(x=>x!==t);persist();render()}});
+}
+function salTx(a,d){const L=live(),tot=L.reduce((s,x)=>s+(x.plan||0),0),fr=L.find(x=>x.free)||L.find(x=>!x.save);if(!fr)return null;const al={};L.forEach(x=>al[x.id]=x.plan||0);al[fr.id]+=a-tot;return{date:d,type:'luong',amt:a,alloc:al,note:'Nhận lương'}}
+function salary(){
+  const L=live(),tot=L.reduce((a,x)=>a+(x.plan||0),0);
+  ask('Nhận lương',[{t:'p',l:'Số tiền được chia vào các quỹ theo kế hoạch (tổng kế hoạch '+fmt(tot)+'). Phần dư hoặc thiếu đi vào quỹ tiêu tự do.'},{k:'a',l:'Số lương nhận được',t:'num',v:tot},{k:'d',l:'Ngày',t:'date',v:today()}],v=>{
+    const t=salTx(v.a,v.d);if(!(v.a>0)||!t){alert('Cần số tiền hợp lệ và ít nhất một quỹ chi tiêu.');return false}
+    add(t);show('home')});
+}
+function newBase(){
+  const R=calc(),L=live();
+  ask('Chốt kỳ / làm mới số dư',[{t:'p',l:'Giữ nguyên các số để chốt kỳ, hoặc sửa theo tiền thực tế để làm mới. Giao dịch cũ được lưu lại cho Báo cáo, không tính vào số dư mới.'},...L.map(x=>({k:'f'+x.id,l:x.e+' '+x.n,t:'num',v:R.f[x.id]})),...S.debts.map(d=>({k:'d'+d.id,l:'Công nợ: '+d.who,t:'num',v:R.D[d.id]}))],v=>{
+    const f={},D={};S.funds.forEach(x=>f[x.id]=x.off?R.f[x.id]:v['f'+x.id]);S.debts.forEach(d=>D[d.id]=v['d'+d.id]);
+    S.hist.push(...S.txs);S.txs=[];S.open={date:today(),f,d:D};persist();render()});
+}
+function tpl(){
+  S.funds=TPL.funds.map(([id,e,n,p],i)=>({id,e,n,c:PAL[i],plan:p,save:id=='tk',free:id=='tudo',goal:id=='tk'?5000000:0,lim:null}));
+  S.cats=TPL.cats.map(([n,f])=>({n,f}));S.debts=[];S.quick=[];persist();render();newBase();
+}
+
+/* ---------- hiển thị ---------- */
+let tab='home',ch={};
+const sc=(l,v,s)=>`<div class="card"><span class="mute">${l}</span><b class="v">${v}</b><span class="mute">${s||''}</span></div>`;
+const bar=(r,c)=>`<div class="bar"><i style="width:${Math.min(100,Math.max(0,r*100))}%;background:${c}"></i></div>`;
+function fillSel(){
+  const ids=['from','to','cat','debt','ffund'],keep=ids.map(i=>$(i).value),fo=live().map(x=>[x.id,x.e+' '+x.n]),t=$('type').value;
+  const o=a=>a.map(([v,l])=>`<option value="${v}">${l}</option>`).join('');
+  $('from').innerHTML=o(t=='no'?[['','(không trừ quỹ)'],...fo]:fo);$('to').innerHTML=o(fo);$('cat').innerHTML=o(S.cats.map(c=>[c.n,c.n]));
+  $('debt').innerHTML=o(S.debts.map(d=>[d.id,d.who+(d.dir=='owe'?' (mình nợ)':' (họ nợ mình)')]));$('ffund').innerHTML=o([['','Tất cả quỹ'],...fo]);
+  ids.forEach((i,k)=>{if([...$(i).options].some(x=>x.value==keep[k]))$(i).value=keep[k]});
+}
+function vis(){const t=$('type').value,h=(id,on)=>$(id).style.display=on?'':'none';
+  h('lc',t=='chi');h('ld',t=='no'||t=='tranno');h('lf',['chi','chuyen','no','tranno'].includes(t));h('lt',t=='thu'||t=='chuyen')}
+function home(R){
+  const L=live(),dl=daysLeft(),[ps]=pr(0),cur=stat(...pr(0)),prv=stat(...pr(1)),fr=L.find(x=>x.free),wd=new Date().getDay(),td=today(),al=[];
+  $('empty').style.display=L.length?'none':'';
+  $('cash').textContent=fmt(R.cash);$('net').textContent='Tài sản ròng '+fmt(R.net)+' (gồm tiết kiệm và công nợ)';
+  $('per').textContent='Kỳ lương từ '+vd(ps)+', còn '+dl+' ngày đến ngày lương';
+  $('stats').innerHTML=sc('Thu kỳ này',fmt(cur.inc))+sc('Chi kỳ này',fmt(cur.out),'Kỳ trước '+fmt(prv.out))+(fr?sc('Tiêu được mỗi ngày',fmt(Math.max(0,Math.floor(R.f[fr.id]/dl/1000)*1000)),fr.n+' còn '+fmt(R.f[fr.id])+' cho '+dl+' ngày'):'');
+  $('funds').innerHTML=L.map(x=>{
+    const b=R.f[x.id],sp=cur.fund[x.id]||0,tg=x.save?x.goal:x.plan,val=x.save?b:sp,r=tg?val/tg:0,lim=(x.lim||[])[wd]||0;
+    const ts=lim?S.txs.filter(t=>t.date==td&&t.type=='chi'&&t.from==x.id).reduce((a,t)=>a+t.amt,0):0;
+    if(b<0)al.push(x.n+' đang âm '+fmt(b));else if(!x.save&&x.plan&&sp>x.plan)al.push(x.n+' đã chi vượt kế hoạch '+fmt(sp-x.plan));if(lim&&ts>lim)al.push(x.n+' hôm nay vượt hạn mức '+fmt(ts-lim));
+    return`<div class="card fund" data-fid="${x.id}" style="--c:${x.c}"><div class="fh"><span class="chip">${x.e}</span><span>${x.n}</span></div><b class="v ${b<0?'neg':''}">${fmt(b)}</b>${tg?bar(r,x.save?x.c:r>1?'var(--bad)':r>.8?'var(--warn)':x.c)+`<span class="mute">${x.save?'Mục tiêu '+fmt(tg)+' ('+Math.round(r*100)+'%)':'Đã chi '+fmt(sp)+' / '+fmt(tg)}</span>`:''}${lim?`<span class="mute ${ts>lim?'neg':''}">Hôm nay ${fmt(ts)} / ${fmt(lim)}</span>`:''}</div>`}).join('');
+  $('alerts').innerHTML=al.map(a=>`<div class="alert">${a}</div>`).join('');
+  $('qb').innerHTML=S.quick.map(q=>`<button class="ghost" data-q="${q.id}">${q.t}</button>`).join('')||'<span class="mute">Chưa có nút nào. Tạo ở tab Quản lý.</span>';
+  const ds=S.debts.filter(d=>R.D[d.id]);$('debtc').style.display=ds.length?'':'none';
+  $('debts').innerHTML=ds.map(d=>`<div class="mrow" style="cursor:default"><div><b>${d.who}</b><span class="mute">${d.dir=='owe'?'Mình nợ':'Họ nợ mình'}</span></div><b class="${d.dir=='owe'?'neg':'ok'}">${fmt(R.D[d.id])}</b></div>`).join('');
+}
+function txList(){
+  const q=$('fq').value.toLowerCase(),ff=$('ffund').value,all=$('fper').value=='all',[a]=pr(0);
+  const L=[...S.txs,...S.hist].filter(t=>(all||t.date>=a)&&(!ff||t.from==ff||t.to==ff||(t.alloc&&t.alloc[ff]))&&(!q||((t.note||'')+' '+(t.cat||'')).toLowerCase().includes(q))).sort((x,y)=>y.date.localeCompare(x.date)).slice(0,100);
+  $('txl').innerHTML=L.map(t=>{const inc=t.type=='thu'||t.type=='luong'||(t.type=='tranno'&&dirOf(t.debt)=='owed'),
+    w=t.type=='chuyen'?F(t.from).n+' → '+F(t.to).n:t.type=='luong'?'Chia theo kế hoạch':(t.type=='no'||t.type=='tranno')?whoOf(t.debt):t.type=='thu'||t.type=='dc'?F(t.to).n:F(t.from).n;
+    return`<div class="tx" data-id="${t.id}"><div><b>${esc(t.note||TL[t.type])}</b><span class="mute">${vd(t.date)}, ${t.cat?t.cat+', ':''}${w}${t.type=='dc'?' (điều chỉnh)':''}</span></div><b class="${inc?'ok':''}">${inc?'+':''}${fmt(t.amt)}</b></div>`}).join('')||'<p class="mute">Chưa có giao dịch nào khớp.</p>';
+}
+function manage(R){
+  $('mf').innerHTML=live().map(x=>`<div class="mrow" data-ef="${x.id}"><span class="chip" style="background:${x.c}33">${x.e}</span><div><b>${x.n}</b><span class="mute">${x.save?'Tiết kiệm':'Chi tiêu'}, kế hoạch ${fmt(x.plan||0)}${x.free?', quỹ tự do':''}</span></div><b>${fmt(R.f[x.id])}</b></div>`).join('')||'<p class="mute">Chưa có quỹ nào.</p>';
+  $('mc').innerHTML=S.cats.map((c,i)=>`<div class="mrow" data-ec="${i}"><div><b>${c.n}</b><span class="mute">Thường trừ: ${F(c.f).n}</span></div></div>`).join('')||'<p class="mute">Chưa có hạng mục nào.</p>';
+  $('md').innerHTML=S.debts.map(d=>`<div class="mrow" data-ed="${d.id}"><div><b>${d.who}</b><span class="mute">${d.dir=='owe'?'Mình nợ họ':'Họ nợ mình'}</span></div><b>${fmt(R.D[d.id])}</b></div>`).join('')||'<p class="mute">Chưa có công nợ nào.</p>';
+  $('mq').innerHTML=S.quick.map(q=>`<div class="mrow" data-eq="${q.id}"><div><b>${q.t}</b><span class="mute">${TL[q.type]}, ${fmt(q.amt)}</span></div></div>`).join('')||'<p class="mute">Chưa có nút nào.</p>';
+}
+function chart(id,cfg,lg){
+  if(typeof Chart=='undefined')return;Chart.defaults.color=css('--ink');Chart.defaults.font.family='"Be Vietnam Pro",system-ui';
+  if(ch[id])ch[id].destroy();cfg.options={responsive:true,maintainAspectRatio:false,plugins:{legend:{display:!!lg}}};
+  if(cfg.type!='doughnut'){const ln=css('--line');cfg.options.scales={x:{grid:{color:ln}},y:{grid:{color:ln},ticks:{callback:v=>v/1000+'k'}}}}
   ch[id]=new Chart($(id),cfg);
 }
-const card=(l,v,s,c)=>`<div class="card"><span class="mute">${l}</span><b class="${c||''}">${v}</b>${s||''}</div>`;
-const bar=(r,col)=>`<div class="bar"><i style="width:${Math.min(100,Math.max(0,r*100))}%;background:${col}"></i></div>`;
-
-function render(){
-  const R=calc(),ps=pstart(),dl=daysLeft(),prev=S.arch[S.arch.length-1],pri=getComputedStyle(document.body).getPropertyValue('--pri');
-  $('cash').textContent=fmt(R.cash);
-  $('check').textContent=R.cash==R.chk?'✓ Sổ khớp: tiền mặt = tổng các quỹ':'Lệch '+fmt(R.cash-R.chk);
-  $('asof').textContent='Kỳ lương từ '+vd(ps)+', còn '+dl+' ngày đến ngày lương';
-  const date=$('date').value||today(),dw=new Date(date+'T00:00').getDay();
-  const lim=dw==0?S.rules.cn:S.rules.sang+(dw==4?S.rules.thu5:0);
-  const ate=S.txs.filter(t=>t.date==date&&t.type=='chi'&&t.from=='an').reduce((a,t)=>a+t.amt,0);
-  const per=Math.max(0,Math.floor(R.f.tudo/dl/1000)*1000),gap=R.debt-R.f.nolunch;
-  $('info').innerHTML=
-    card('Tiết kiệm',fmt(R.sav),bar(R.sav/S.goal,pri)+`<span class="mute">Mục tiêu quỹ khẩn cấp ${fmt(S.goal)} (${Math.round(R.sav/S.goal*100)}%)</span>`)+
-    card('Nợ ăn trưa công ty (chưa trả)',fmt(R.debt),`<span class="mute ${gap>0?'neg':''}">${gap>0?'Quỹ dành trả đang thiếu '+fmt(gap):'Quỹ dành trả đã đủ'}</span>`)+
-    card('Thu kỳ này',fmt(R.inc))+
-    card('Chi kỳ này',fmt(R.out),`<span class="mute">${prev?'Kỳ trước '+fmt(prev.out)+', '+(R.out>prev.out?'cao hơn ':'thấp hơn ')+fmt(Math.abs(R.out-prev.out)):'Chưa có kỳ trước để so sánh'}</span>`)+
-    card('Quỹ tự do mỗi ngày',fmt(per),`<span class="mute">Còn ${fmt(R.f.tudo)} cho ${dl} ngày</span>`)+
-    card('Ăn ngày '+vd(date),fmt(ate)+' / '+fmt(lim),bar(ate/lim,ate>lim?'var(--bad)':pri),ate>lim?'neg':'');
-  $('funds').innerHTML=FUNDS.map(x=>{const p=S.plan[x.id]||0,s=R.spent[x.id],r=p?s/p:0;
-    return `<div class="card fund" style="--c:${x.c}"><span class="mute">${x.n}</span><b class="${R.f[x.id]<0?'neg':''}">${fmt(R.f[x.id])}</b>${p?bar(r,r>1?'var(--bad)':r>.8?'var(--warn)':x.c)+`<span class="mute">Đã chi ${fmt(s)} / ${fmt(p)}</span>`:''}</div>`}).join('');
-  const neg=FUNDS.filter(x=>R.f[x.id]<0);
-  $('warn').style.display=neg.length?'block':'none';
-  $('warn').textContent=neg.length?'Đang âm: '+neg.map(x=>x.n+' '+fmt(R.f[x.id])).join(', ')+'. Hãy chuyển quỹ hoặc ghi thêm thu nhập.':'';
-  $('tb').innerHTML=[...R.list].reverse().slice(0,80).map(t=>`<tr><td>${vd(t.date)}</td><td>${t.note||'—'}</td><td>${t.cat||(t.type=='chi'?'—':TL[t.type])}</td><td>${t.type=='chuyen'?fn(t.from)+' → '+fn(t.to):t.type=='luong'?'Chia theo kế hoạch':t.type=='no'?'—':fn(t.from||t.to)}</td><td class="n ${['thu','luong'].includes(t.type)||t.type=='dc'&&t.amt>0?'ok':''}">${fmt(t.amt)}</td><td><button data-id="${t.id}" aria-label="Xóa">Xóa</button></td></tr>`).join('')||'<tr><td colspan="6" class="mute">Chưa có giao dịch. Nhập khoản đầu tiên ở phía trên.</td></tr>';
-  const cats=Object.keys(R.cat);
-  chart('c1',{type:'doughnut',data:{labels:cats,datasets:[{data:cats.map(c=>R.cat[c]),backgroundColor:cats.map((c,i)=>hue(i)),borderWidth:0}]}},1);
-  const days=[];for(let i=13;i>=0;i--){const d=new Date();d.setDate(d.getDate()-i);days.push(dstr(d))}
-  chart('c2',{type:'bar',data:{labels:days.map(d=>vd(d).slice(0,5)),datasets:[{data:days.map(d=>R.daily[d]||0),backgroundColor:pri}]}});
+function report(R){
+  if(!$('rp').options.length)$('rp').innerHTML=[0,1,2,3,4,5].map(i=>{const[a,b]=pr(i);return`<option value="${i}">${i?'Kỳ '+vd(a)+' đến '+vd(b):'Kỳ này, từ '+vd(a)}</option>`}).join('');
+  const i=+$('rp').value,[a,b]=pr(i),st=stat(a,b),pri=css('--pri'),cats=Object.keys(st.cat),L=live();
+  $('rsum').innerHTML=sc('Thu',fmt(st.inc))+sc('Chi',fmt(st.out))+sc('Chênh lệch',fmt(st.inc-st.out),st.inc?'Chi bằng '+Math.round(st.out/st.inc*100)+'% thu nhập':'');
+  chart('c1',{type:'doughnut',data:{labels:cats,datasets:[{data:cats.map(c=>st.cat[c]),backgroundColor:cats.map((c,k)=>`hsl(${k*37} 60% 50%)`),borderWidth:0}]}},1);
+  const days=[];for(let d=new Date(a+'T00:00');dstr(d)<=b&&dstr(d)<=today()&&days.length<45;d.setDate(d.getDate()+1))days.push(dstr(d));
+  chart('c2',{type:'bar',data:{labels:days.map(d=>vd(d).slice(0,5)),datasets:[{data:days.map(d=>st.daily[d]||0),backgroundColor:pri}]}});
+  chart('c3',{type:'bar',data:{labels:L.map(x=>x.n),datasets:[{label:'Kế hoạch',data:L.map(x=>x.plan||0),backgroundColor:'#94a3b8'},{label:'Đã chi',data:L.map(x=>st.fund[x.id]||0),backgroundColor:pri}]}},1);
+  const ps=[5,4,3,2,1,0].map(k=>{const[x,y]=pr(k);return[vd(x).slice(0,5),stat(x,y)]});
+  chart('c4',{type:'bar',data:{labels:ps.map(p=>p[0]),datasets:[{label:'Thu',data:ps.map(p=>p[1].inc),backgroundColor:css('--ok')},{label:'Chi',data:ps.map(p=>p[1].out),backgroundColor:css('--bad')}]}},1);
   const bd={};R.line.forEach(([d,v])=>bd[d]=v);const ds=Object.keys(bd).sort();
-  chart('c3',{type:'line',data:{labels:ds.map(d=>vd(d).slice(0,5)),datasets:[{data:ds.map(d=>bd[d]),borderColor:pri,backgroundColor:pri,tension:.25}]}});
-  chart('c4',{type:'bar',data:{labels:FUNDS.map(x=>x.n),datasets:[{label:'Kế hoạch',data:FUNDS.map(x=>S.plan[x.id]||0),backgroundColor:'#94a3b8'},{label:'Đã chi',data:FUNDS.map(x=>R.spent[x.id]),backgroundColor:pri}]}},1);
-  qb();if(!$('set').contains(document.activeElement))setHTML();
+  chart('c5',{type:'line',data:{labels:ds.map(d=>vd(d).slice(0,5)),datasets:[{data:ds.map(d=>bd[d]),borderColor:pri,backgroundColor:pri,tension:.25}]}});
 }
-
-function setHTML(){
-  const rows=[...FUNDS.map(x=>['p:'+x.id,'Kế hoạch: '+x.n,S.plan[x.id]||0]),['p:sav','Kế hoạch: tiết kiệm',S.plan.sav],['goal','Mục tiêu quỹ khẩn cấp',S.goal],['pay','Ngày nhận lương (1-28)',S.pay],['r:sang','Ăn sáng mỗi bữa',S.rules.sang],['r:truaCT','Trưa công ty (ghi nợ)',S.rules.truaCT],['r:thu5','Trưa Thứ 5 tối đa',S.rules.thu5],['r:cn','Chủ nhật tối đa/ngày',S.rules.cn]];
-  $('set').innerHTML=rows.map(([key,l,v])=>`<label>${l}<input data-k="${key}" value="${v}"></label>`).join('');
-  const tot=FUNDS.reduce((a,x)=>a+(S.plan[x.id]||0),0)+S.plan.sav;$('ptot').textContent='Tổng kế hoạch mỗi kỳ lương: '+fmt(tot);
+function render(){
+  const R=calc();fillSel();vis();home(R);txList();manage(R);if(tab=='report')report(R);
+  if(document.activeElement!==$('pay'))$('pay').value=S.pay;
+  aiForm();
 }
-$('set').onchange=e=>{const key=e.target.dataset.k,v=parse(e.target.value);if(!key||isNaN(v))return alert('Số chưa hợp lệ.');
-  if(key.startsWith('p:'))S.plan[key.slice(2)]=v;else if(key.startsWith('r:'))S.rules[key.slice(2)]=v;else S[key]=v;save();render()};
+function show(t){tab=t;document.querySelectorAll('.pane').forEach(p=>p.classList.toggle('on',p.id=='p-'+t));document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.t==t));render();scrollTo(0,0)}
 
-function opts(){const h=FUNDS.map(x=>`<option value="${x.id}">${x.n}</option>`).join('');$('from').innerHTML=h;$('to').innerHTML=h;$('from').value='an';$('to').value='tudo';$('cat').innerHTML=CATS.map(c=>`<option>${c}</option>`).join('')}
-function vis(){const t=$('type').value;$('lf').style.display=['chi','chuyen','tranno','tk'].includes(t)?'':'none';$('lt').style.display=['thu','chuyen'].includes(t)?'':'none';$('lc').style.display=t=='chi'?'':'none';if(t=='tranno')$('from').value='nolunch'}
-$('type').onchange=vis;$('cat').onchange=()=>{$('from').value=CF[$('cat').value]||'tudo'};$('date').onchange=render;
-const add=t=>{S.txs.push({id:Date.now()+Math.floor(Math.random()*999),...t});save();render()};
-$('f').onsubmit=e=>{e.preventDefault();const a=parse($('amt').value),t=$('type').value;
+/* ---------- sự kiện ---------- */
+$('nav').onclick=e=>{const b=e.target.closest('button');if(b)show(b.dataset.t)};
+$('more').onclick=()=>{show('tx');$('amt').focus()};
+$('type').onchange=()=>{fillSel();vis()};
+$('cat').onchange=()=>{const c=S.cats.find(c=>c.n==$('cat').value);if(c&&live().some(x=>x.id==c.f))$('from').value=c.f};
+['fq','ffund','fper'].forEach(i=>$(i).oninput=txList);$('rp').onchange=render;
+$('f').onsubmit=e=>{
+  e.preventDefault();const t=$('type').value,a=parse($('amt').value),fr=$('from').value,to=$('to').value;
   if(!(a>0))return alert('Số tiền chưa hợp lệ. Nhập ví dụ 20k hoặc 35000.');
-  if(t=='chuyen'&&$('from').value==$('to').value)return alert('Quỹ nguồn và quỹ đích đang giống nhau.');
-  add({date:$('date').value,type:t,amt:a,from:$('from').value,to:$('to').value,cat:t=='chi'?$('cat').value:'',note:$('note').value.trim()});
-  $('amt').value='';$('note').value='';$('amt').focus()};
-const QB=()=>[{t:'Sáng '+k(S.rules.sang),type:'chi',amt:S.rules.sang,from:'an',cat:'Ăn sáng',note:'Ăn sáng'},{t:'Trưa công ty '+k(S.rules.truaCT)+' (ghi nợ)',type:'no',amt:S.rules.truaCT,note:'Ăn trưa công ty'},{t:'Trưa Thứ 5 '+k(S.rules.thu5),type:'chi',amt:S.rules.thu5,from:'an',cat:'Ăn trưa',note:'Ăn trưa'}];
-function qb(){$('qb').innerHTML=QB().map((b,i)=>`<button class="ghost" data-i="${i}">${b.t}</button>`).join('')}
-$('qb').onclick=e=>{const b=QB()[e.target.dataset.i];if(b){const{t,...x}=b;add({date:$('date').value,...x})}};
-$('tb').onclick=e=>{const id=e.target.dataset.id;if(id&&confirm('Xóa giao dịch này?')){S.txs=S.txs.filter(t=>t.id!=id);save();render()}};
-
+  const x={date:$('date').value,type:t,amt:a,note:$('note').value.trim()};
+  if(t=='chi'){if(!fr)return alert('Chưa có quỹ. Tạo quỹ ở tab Quản lý.');x.from=fr;x.cat=$('cat').value}
+  else if(t=='thu'){if(!to)return alert('Chưa có quỹ nhận.');x.to=to}
+  else if(t=='chuyen'){if(!fr||fr==to)return alert('Chọn hai quỹ khác nhau.');x.from=fr;x.to=to}
+  else{const d=S.debts.find(d=>d.id==$('debt').value);if(!d)return alert('Chưa có công nợ. Tạo ở tab Quản lý.');x.debt=d.id;
+    if(t=='no'){if(fr&&d.dir=='owed')x.from=fr}else{if(!fr)return alert('Chọn quỹ trả hoặc nhận tiền.');if(d.dir=='owed')x.to=fr;else x.from=fr}}
+  add(x);$('amt').value='';$('note').value='';$('amt').focus();
+};
+$('qb').onclick=e=>{const q=S.quick.find(x=>x.id==e.target.dataset.q);if(!q)return;
+  if(q.type=='thu')add({date:today(),type:'thu',amt:q.amt,to:q.from,note:q.note});
+  else if(q.type=='no')add({date:today(),type:'no',amt:q.amt,debt:q.debt,note:q.note});
+  else add({date:today(),type:'chi',amt:q.amt,from:q.from,cat:q.cat||undefined,note:q.note})};
+$('txl').onclick=e=>{const r=e.target.closest('[data-id]');if(r)editTx(r.dataset.id)};
+$('funds').onclick=e=>{const c=e.target.closest('[data-fid]');if(c)editFund(c.dataset.fid)};
+$('p-manage').onclick=e=>{const t=e.target.closest('[data-ef],[data-ec],[data-ed],[data-eq],[data-add]');if(!t)return;const D=t.dataset;
+  if(D.add)return{fund:()=>editFund(),cat:()=>editCat(),debt:()=>editDebt(),quick:()=>editQuick()}[D.add]();
+  if(D.ef)editFund(D.ef);else if(D.ec!=null)editCat(+D.ec);else if(D.ed)editDebt(D.ed);else editQuick(D.eq)};
+$('tplb').onclick=tpl;$('newf').onclick=()=>{show('manage');editFund()};
 let pd=0;
 $('rc').onclick=()=>{const a=parse($('real').value);if(isNaN(a))return alert('Số tiền chưa hợp lệ.');const c=calc().cash;pd=a-c;
-  $('rres').innerHTML=pd?`Sổ ghi ${fmt(c)}, thực tế ${fmt(a)}, lệch <b class="neg" style="display:inline;font-size:inherit">${fmt(pd)}</b> <button id="rfix">Ghi điều chỉnh vào quỹ tự do</button>`:'<span class="ok">Khớp, không lệch.</span>'};
-$('rres').onclick=e=>{if(e.target.id=='rfix'&&pd){add({date:today(),type:'dc',amt:pd,to:'tudo',note:'Chênh lệch chưa xác định nguồn'});pd=0;$('rres').textContent='Đã ghi điều chỉnh.';$('real').value=''}};
-
-$('bsal').onclick=()=>{
-  const tot=FUNDS.reduce((a,x)=>a+(S.plan[x.id]||0),0)+S.plan.sav,v=prompt('Số lương nhận được (kế hoạch '+fmt(tot)+'):',tot);if(v===null)return;
-  const a=parse(v);if(!(a>0))return alert('Số tiền chưa hợp lệ.');
-  const alloc={};FUNDS.forEach(x=>alloc[x.id]=S.plan[x.id]||0);alloc.tudo+=a-tot;
-  if(alloc.tudo<0&&!confirm('Lương thấp hơn kế hoạch, quỹ tự do sẽ nhận '+fmt(alloc.tudo)+'. Tiếp tục?'))return;
-  add({date:$('date').value,type:'luong',amt:a,alloc,sav:S.plan.sav,note:'Nhận lương'});
-};
-function closeP(R,f,sav,debt){
-  S.arch.push({label:vd(pstart())+' - '+vd(today()),inc:R.inc,out:R.out,cat:R.cat});
-  S.open={date:today(),f,sav,debt};S.txs=[];save();render();
-}
-$('bnew').onclick=()=>{if(!confirm('Chốt kỳ và mang toàn bộ số dư hiện tại sang kỳ mới? Giao dịch cũ sẽ được lưu tóm tắt để so sánh.'))return;const R=calc();closeP(R,{...R.f},R.sav,R.debt)};
-$('brst').onclick=()=>{
-  if(!confirm('Làm mới sẽ xóa giao dịch cũ (lưu tóm tắt) và nhập lại số dư theo thực tế. Tiếp tục?'))return;
-  const R=calc(),g=(m,d)=>{const v=prompt(m,d);return v===null?NaN:parse(v)};
-  const cash=g('Tiền mặt thực tế đang có:',R.cash),sav=g('Tiết kiệm thực tế:',R.sav),debt=g('Nợ ăn trưa công ty hiện tại:',R.debt);
-  if([cash,sav,debt].some(isNaN))return alert('Đã hủy vì có số chưa hợp lệ.');
-  const f={};FUNDS.forEach(x=>f[x.id]=0);
-  if(confirm('Chia số tiền mặt vào các quỹ theo tỷ lệ kế hoạch? Chọn Hủy để dồn hết vào quỹ tự do.')){
-    const tot=FUNDS.reduce((a,x)=>a+(S.plan[x.id]||0),0)||1;let s=0;
-    FUNDS.forEach(x=>{f[x.id]=Math.floor(cash*(S.plan[x.id]||0)/tot/1000)*1000;s+=f[x.id]});f.tudo+=cash-s;
-  }else f.tudo=cash;
-  closeP(R,f,sav,debt);
-};
+  $('rres').innerHTML=pd?`<span class="mute">Sổ ghi ${fmt(c)}, thực tế ${fmt(a)}, lệch <b class="neg">${fmt(pd)}</b></span> <button id="rfix">Ghi điều chỉnh vào quỹ tự do</button>`:'<span class="ok">Khớp, không lệch.</span>'};
+$('rres').onclick=e=>{if(e.target.id!='rfix'||!pd)return;const fr=live().find(x=>x.free)||live().find(x=>!x.save);if(!fr)return alert('Chưa có quỹ để ghi điều chỉnh.');
+  add({date:today(),type:'dc',amt:pd,to:fr.id,note:'Chênh lệch chưa xác định nguồn'});pd=0;$('rres').textContent='Đã ghi điều chỉnh.';$('real').value=''};
+$('bsal').onclick=salary;$('bnew').onclick=newBase;
+$('pay').onchange=()=>{const v=parse($('pay').value);if(!(v>=1&&v<=28)){alert('Nhập ngày từ 1 đến 28.');$('pay').value=S.pay;return}S.pay=v;persist();render()};
 $('exp').onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(S,null,1)],{type:'application/json'}));a.download='so-tien-'+today()+'.json';a.click()};
 $('imp').onclick=()=>$('file').click();
-$('file').onchange=e=>{const r=new FileReader();r.onload=()=>{try{const j=JSON.parse(r.result);if(!j.open||!j.txs)throw 0;S=norm(j);save();render()}catch(x){alert('File sao lưu không đúng định dạng.')}};r.readAsText(e.target.files[0])};
+$('file').onchange=e=>{const r=new FileReader();r.onload=()=>{try{const j=JSON.parse(r.result);if(!j.open||!j.txs)throw 0;S=norm(j);persist();render()}catch(x){alert('File sao lưu không đúng định dạng.')}};r.readAsText(e.target.files[0])};
+$('wipe').onclick=()=>{if(confirm('Xóa toàn bộ quỹ, giao dịch và cài đặt rồi bắt đầu lại? Nên xuất file sao lưu trước.')){S=blank();persist();render()}};
 
-/* ===== ĐỒNG BỘ FIREBASE ===== */
+/* ---------- trợ lý AI ---------- */
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const AIK='so-tien-ai';
+const MODELS={gemini:['gemini-3.8-flash','gemini-3.5-flash','gemini-3.5-flash-lite'],claude:['claude-haiku-4-5-20251001','claude-sonnet-5-5']};
+let AI={prov:'gemini',key:'',model:'gemini-3.8-flash',confirm:false},pend=[],lastB=[];
+try{const a=JSON.parse(localStorage.getItem(AIK));if(a)AI={prov:a.prov||'claude',key:a.key||'',model:a.model||AI.model,confirm:!!a.confirm}}catch(e){}
+const TOOL={name:'ghi_so',description:'Ghi các giao dịch người dùng vừa nói vào sổ, và/hoặc trả lời câu hỏi, và/hoặc hỏi lại phần còn thiếu.',input_schema:{type:'object',properties:{
+  giao_dich:{type:'array',description:'Chỉ gồm giao dịch đủ thông tin và chắc chắn.',items:{type:'object',properties:{loai:{type:'string',enum:['chi','thu','chuyen','no','tranno','luong','doichieu']},so_tien:{type:'number'},ngay:{type:'string',description:'YYYY-MM-DD'},tu_quy:{type:'string',description:'id quỹ'},den_quy:{type:'string',description:'id quỹ'},hang_muc:{type:'string'},cong_no:{type:'string',description:'id công nợ'},noi_dung:{type:'string'}},required:['loai','so_tien','ngay']}},
+  hoi_lai:{type:'array',items:{type:'string'},description:'Câu hỏi cho phần thiếu hoặc không chắc, hoặc nghi trùng.'},
+  tra_loi:{type:'string',description:'Trả lời ngắn nếu người dùng hỏi về số liệu, hoặc ghi chú ngắn.'}},required:['giao_dich']}};
+function aiCtx(){
+  const R=calc(),wd=new Date().getDay();
+  return JSON.stringify({hom_nay:today(),thu:WD[wd],tien_mat:R.cash,
+    quy:live().map(x=>({id:x.id,ten:x.n,so_du:R.f[x.id],tiet_kiem:!!x.save,quy_tu_do:!!x.free,ke_hoach:x.plan||0,han_muc_hom_nay:(x.lim||[])[wd]||0})),
+    hang_muc:S.cats.map(c=>({ten:c.n,quy_mac_dinh:c.f})),
+    cong_no:S.debts.map(c=>({id:c.id,ten:c.who,loai:c.dir=='owe'?'minh_no':'ho_no_minh',so_du:R.D[c.id]})),
+    nut_nhanh:S.quick.map(q=>({ten:q.t,loai:q.type,so_tien:q.amt,quy:q.from,hang_muc:q.cat,cong_no:q.debt})),
+    gan_day:[...S.txs].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,25).map(t=>[t.date,t.type,t.amt,t.from||t.to||t.debt||'',t.note||''])});
+}
+const SYS=()=>`Bạn là trợ lý nhập sổ chi tiêu cá nhân (tiền Việt, đơn vị đồng). Người dùng nhập lời tự nhiên, bạn gọi công cụ ghi_so.
+Quy tắc:
+- Chỉ đưa vào giao_dich những khoản có đủ số tiền và quỹ chắc chắn. Thiếu số tiền, không rõ quỹ, hoặc không chắc thì KHÔNG đoán: đưa câu hỏi vào hoi_lai.
+- "20k"=20000, "1tr"=1000000, "1tr5"=1500000. Ngày: hôm nay, hôm qua, hôm kia, "ngày 8"... tính theo hom_nay trong dữ liệu; mặc định là hôm nay.
+- Quỹ: dùng đúng quỹ người dùng nói (ví dụ "trừ quỹ tự do"); nếu không nói thì dùng quỹ mặc định của hạng mục phù hợp; không phù hợp thì hỏi lại. Dùng id quỹ và id công nợ trong dữ liệu.
+- Loại: chi (tiền ra thật), thu (tiền vào thật, đã nhận), chuyen (chuyển giữa quỹ, cần tu_quy và den_quy), no (ghi nợ, tiền chưa ra, cần cong_no), tranno (trả nợ hoặc nhận lại tiền, cần cong_no và quỹ), luong (nhận lương, app tự chia theo kế hoạch), doichieu (người dùng báo tiền mặt thực tế đang có, so_tien là số thực tế, app tự tính chênh lệch).
+- Khoản "dự kiến" hoặc "sẽ nhận" thì không ghi thu. Nút ghi nhanh trong dữ liệu cho biết cách người dùng hay ghi, khoản tương tự thì ghi giống vậy.
+- Nếu một khoản giống hệt khoản đã có trong gan_day cùng ngày thì không ghi, hỏi lại có phải trùng không.
+- Câu hỏi về số liệu: trả lời trong tra_loi, chỉ dựa trên dữ liệu, không bịa. Trả lời tiếng Việt, ngắn gọn.
+Quy tắc riêng của người dùng:
+${S.aiRules||'(chưa có)'}
+Dữ liệu sổ hiện tại (JSON): ${aiCtx()}`;
+function aiToTx(g,qs){
+  const L=live(),fid=id=>L.some(x=>x.id==id)?id:null,a=Math.abs(+g.so_tien)||0,note=String(g.noi_dung||'').trim(),
+    date=/^\d{4}-\d{2}-\d{2}$/.test(g.ngay)?g.ngay:today(),lbl=(note||TL[g.loai]||'khoản này')+' '+fmt(a),
+    cat=S.cats.find(c=>c.n.toLowerCase()==String(g.hang_muc||'').toLowerCase()),deb=S.debts.find(d=>d.id==g.cong_no),b={date,amt:a,note};
+  const q=m=>{qs.push(m);return null};
+  if(!a)return q('Thiếu số tiền: '+(note||g.loai));
+  if(g.loai=='chi'){const f=fid(g.tu_quy);return f?{...b,type:'chi',from:f,cat:cat?cat.n:undefined}:q('Trừ quỹ nào cho "'+lbl+'"?')}
+  if(g.loai=='thu'){const t=fid(g.den_quy);return t?{...b,type:'thu',to:t}:q('Thu "'+lbl+'" vào quỹ nào?')}
+  if(g.loai=='chuyen'){const f=fid(g.tu_quy),t=fid(g.den_quy);return f&&t&&f!=t?{...b,type:'chuyen',from:f,to:t}:q('Chuyển "'+lbl+'" từ quỹ nào sang quỹ nào?')}
+  if(g.loai=='no'){if(!deb)return q('Ghi nợ "'+lbl+'" vào công nợ nào?');const x={...b,type:'no',debt:deb.id};if(deb.dir=='owed'&&fid(g.tu_quy))x.from=g.tu_quy;return x}
+  if(g.loai=='tranno'){const f=fid(g.tu_quy)||fid(g.den_quy);if(!deb||!f)return q('Trả nợ hoặc nhận lại "'+lbl+'": công nợ nào và quỹ nào?');return deb.dir=='owed'?{...b,type:'tranno',debt:deb.id,to:f}:{...b,type:'tranno',debt:deb.id,from:f}}
+  if(g.loai=='luong')return salTx(a,date)||q('Chưa có quỹ để chia lương.');
+  return q('Không hiểu loại giao dịch: '+g.loai);
+}
+const aiLine=t=>{const w=t.type=='chuyen'?F(t.from).n+' → '+F(t.to).n:t.type=='luong'?'chia theo kế hoạch':(t.type=='no'||t.type=='tranno')?whoOf(t.debt):F(t.from||t.to).n;
+  return`${TL[t.type]} <b>${fmt(t.amt)}</b>, ${esc(w)}${t.cat?', '+esc(t.cat):''}${t.note?', '+esc(t.note):''} (${vd(t.date)})`};
+function commit(){lastB=pend.map(t=>{const x={id:rid(),...t};S.txs.push(x);return x.id});pend=[];$('ait').value='';persist();render()}
+function aiShow(o){
+  const qs=[...(o.hoi_lai||[])],T=[],recs=[];
+  for(const g of o.giao_dich||[]){if(g.loai=='doichieu'){recs.push(g);continue}const t=aiToTx(g,qs);if(t)T.push(t)}
+  for(const g of recs){
+    const keep=S.txs;S.txs=[...keep,...T.map(t=>({...t,id:rid()}))];const c=calc().cash;S.txs=keep;
+    const fr=live().find(x=>x.free)||live().find(x=>!x.save),d=(+g.so_tien)-c;
+    if(!fr)qs.push('Chưa có quỹ để ghi điều chỉnh tiền mặt.');else if(d)T.push({date:today(),type:'dc',amt:d,to:fr.id,note:'Chênh lệch chưa xác định nguồn'});
+  }
+  pend=T;let h='';
+  if(o.tra_loi)h+=`<p style="margin:0 0 8px">${esc(o.tra_loi)}</p>`;
+  if(T.length)h+=`<div class="mute">${AI.confirm?'AI định ghi:':'Đã ghi vào sổ:'}</div>`+T.map(t=>`<div class="aiok">${aiLine(t)}</div>`).join('');
+  if(qs.length)h+=`<div class="mute" style="margin-top:8px">Cần bạn trả lời thêm (chưa ghi các khoản này):</div>`+qs.map(q=>`<div class="alert" style="margin-top:4px">${esc(q)}</div>`).join('');
+  if(T.length){if(AI.confirm)h+=`<div class="row" style="margin-top:8px"><button id="aiyes">Ghi vào sổ</button><button class="ghost" id="aino">Bỏ qua</button></div>`;else{commit();h+=`<div class="row" style="margin-top:8px"><button class="ghost" id="aiundo">Hoàn tác</button></div>`}}
+  $('aires').innerHTML=h||'<span class="mute">AI không tìm thấy giao dịch nào để ghi.</span>';
+}
+async function aiRun(text){
+  const res=$('aires');
+  if(!AI.key){res.innerHTML='<div class="alert">Chưa có API key. Vào Cài đặt, mục Trợ lý AI để dán key.</div>';return}
+  $('aigo').disabled=true;res.innerHTML='<span class="mute">AI đang đọc và tính...</span>';
+  try{
+    const gem=AI.prov=='gemini';
+    const r=await fetch(gem?'https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(AI.model)+':generateContent':'https://api.anthropic.com/v1/messages',
+      gem?{method:'POST',headers:{'content-type':'application/json','x-goog-api-key':AI.key},body:JSON.stringify({systemInstruction:{parts:[{text:SYS()}]},contents:[{role:'user',parts:[{text}]}],tools:[{functionDeclarations:[{name:TOOL.name,description:TOOL.description,parameters:TOOL.input_schema}]}],toolConfig:{functionCallingConfig:{mode:'ANY',allowedFunctionNames:[TOOL.name]}}})}
+      :{method:'POST',headers:{'content-type':'application/json','x-api-key':AI.key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:AI.model,max_tokens:1500,system:SYS(),tools:[TOOL],tool_choice:{type:'tool',name:TOOL.name},messages:[{role:'user',content:text}]})});
+    const j=await r.json().catch(()=>({})),em=(j.error&&j.error.message)||'';
+    if(!r.ok)throw new Error(r.status==401||((r.status==400||r.status==403)&&/key/i.test(em))?'API key không đúng hoặc không có quyền dùng.':r.status==404?'Tên mô hình không tồn tại hoặc đã ngừng. Hãy đổi mô hình trong Cài đặt.':r.status==429?'Đã chạm giới hạn lượt gọi hoặc hạn mức miễn phí. Thử lại sau ít phút.':em||('Lỗi '+r.status));
+    let o;
+    if(gem){const c=(j.candidates||[])[0],fc=((c&&c.content&&c.content.parts)||[]).find(x=>x.functionCall);o=fc&&fc.functionCall.args}
+    else o=(j.content.find(c=>c.type=='tool_use')||{}).input;
+    if(!o)throw new Error(j.promptFeedback&&j.promptFeedback.blockReason?'Yêu cầu bị bộ lọc của AI chặn.':'AI không trả về kết quả hợp lệ. Thử nói rõ hơn.');
+    aiShow(o);
+  }catch(e){res.innerHTML=`<div class="alert">${esc(e.message=='Failed to fetch'?'Không kết nối được tới API. Kiểm tra mạng rồi thử lại.':e.message)}</div>`}
+  $('aigo').disabled=false;
+}
+const fillModels=()=>{$('aimodels').innerHTML=(MODELS[$('aiprov').value]||MODELS.gemini).map(m=>`<option value="${m}">`).join('')};
+function aiForm(){const a=document.activeElement;if(a&&a.closest&&a.closest('#aiform,#airules'))return;$('aiprov').value=AI.prov;$('aikey').value=AI.key;$('aimodel').value=AI.model;$('aiconf').checked=AI.confirm;fillModels();$('airules').value=S.aiRules||''}
+$('aiprov').onchange=()=>{fillModels();$('aimodel').value=MODELS[$('aiprov').value][0]};
+$('aigo').onclick=()=>{const t=$('ait').value.trim();if(t)aiRun(t)};
+$('ait').onkeydown=e=>{if(e.key=='Enter'&&(e.ctrlKey||e.metaKey)){e.preventDefault();$('aigo').click()}};
+$('aires').onclick=e=>{const id=e.target.id;
+  if(id=='aiyes'){commit();$('aires').innerHTML='<span class="ok">Đã ghi vào sổ.</span> <button class="ghost" id="aiundo">Hoàn tác</button>'}
+  else if(id=='aino'){pend=[];$('aires').innerHTML=''}
+  else if(id=='aiundo'){S.txs=S.txs.filter(t=>!lastB.includes(t.id));lastB=[];persist();render();$('aires').innerHTML='<span class="mute">Đã hoàn tác.</span>'}};
+$('aisave').onclick=()=>{const pv=$('aiprov').value||'gemini';AI={prov:pv,key:$('aikey').value.trim(),model:$('aimodel').value.trim()||MODELS[pv][0],confirm:$('aiconf').checked};try{localStorage.setItem(AIK,JSON.stringify(AI))}catch(e){}
+  S.aiRules=$('airules').value;persist();$('aisaved').textContent='Đã lưu';setTimeout(()=>$('aisaved').textContent='',2000)};
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+if(SR){$('aimic').style.display='';$('aimic').onclick=()=>{const r=new SR();r.lang='vi-VN';r.onresult=e=>{$('ait').value+=($('ait').value?' ':'')+e.results[0][0].transcript};r.start()}}
+
+/* ---------- đồng bộ Firebase ---------- */
 const FIREBASE_CONFIG={apiKey:"AIzaSyBxYcZ91BKifVsZu_wiWh5kul4Do3N5QvM",authDomain:"sotienaki.firebaseapp.com",projectId:"sotienaki",appId:"1:1090136053019:web:392fc66abd4ebc3ec22fbe"};
 let auth=null,db=null,uid=null,unsub=null,lastJson='';
 const setStat=m=>{$('cstat').textContent=m};
 const nowT=()=>new Date().toLocaleTimeString('vi-VN');
 function cloudInit(){
-  if(!FIREBASE_CONFIG.apiKey||typeof firebase==='undefined'){setStat('Chưa bật đồng bộ: dữ liệu chỉ lưu trên máy này.');$('authform').style.display='none';return}
+  if(!FIREBASE_CONFIG.apiKey||typeof firebase==='undefined'){setStat('Chỉ lưu trên máy này');$('authform').style.display='none';return}
   firebase.initializeApp(FIREBASE_CONFIG);auth=firebase.auth();db=firebase.firestore();
   auth.onAuthStateChanged(u=>{
     if(unsub){unsub();unsub=null}
-    if(!u){uid=null;lastJson='';$('authform').style.display='';$('logout').style.display='none';setStat('Chưa đăng nhập. Đăng nhập để đồng bộ giữa các máy.');return}
+    if(!u){uid=null;lastJson='';$('authform').style.display='';$('logout').style.display='none';setStat('Chưa đăng nhập, vào Cài đặt để đồng bộ');return}
     uid=u.uid;$('authform').style.display='none';$('logout').style.display='';setStat('Đang kết nối: '+u.email);
     unsub=db.collection('ledgers').doc(uid).onSnapshot(snap=>{
       if(!snap.exists){cloudPush();return}
       if(snap.metadata.hasPendingWrites)return;
-      const j=snap.data().data;if(j===lastJson){setStat('Đã đồng bộ ('+u.email+') lúc '+nowT());return}
-      try{S=norm(JSON.parse(j));lastJson=j;try{localStorage.setItem(KEY,j)}catch(e){}render();setStat('Đã đồng bộ ('+u.email+') lúc '+nowT())}catch(e){setStat('Dữ liệu trên đám mây bị lỗi định dạng.')}
+      const j=snap.data().data;if(j===lastJson){setStat('Đã đồng bộ lúc '+nowT());return}
+      try{S=norm(JSON.parse(j));lastJson=j;try{localStorage.setItem(KEY,j)}catch(e){}render();setStat('Đã đồng bộ lúc '+nowT())}catch(e){setStat('Dữ liệu đám mây bị lỗi định dạng')}
     },err=>setStat('Lỗi đồng bộ: '+err.message));
   });
   $('login').onclick=()=>auth.signInWithEmailAndPassword($('em').value.trim(),$('pw').value).catch(e=>alert('Đăng nhập chưa được: '+e.message));
@@ -293,7 +535,7 @@ function cloudPush(){
   if(!uid)return;const j=JSON.stringify(S);if(j===lastJson)return;lastJson=j;
   db.collection('ledgers').doc(uid).set({data:j,updated:Date.now()}).then(()=>setStat('Đã lưu lên đám mây lúc '+nowT())).catch(e=>setStat('Lỗi lưu: '+e.message));
 }
-$('date').value=today();opts();vis();qb();render();cloudInit();
+$('date').value=today();render();cloudInit();
 </script>
 </body>
 </html>
