@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sổ tiền cá nhân</title>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<style>
+:root{--bg:#eef3f4;--card:#fff;--ink:#12242b;--mute:#5d7078;--line:#d6e0e3;--pri:#0f766e;--bad:#c2410c;--warn:#d97706}
+@media(prefers-color-scheme:dark){:root{--bg:#0e1a1f;--card:#16262d;--ink:#e6f0f2;--mute:#8fa5ad;--line:#27404a;--pri:#2dd4bf;--bad:#fb923c;--warn:#fbbf24}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 "Be Vietnam Pro",system-ui,sans-serif}
+main{max-width:1020px;margin:0 auto;padding:20px 16px 60px}
+h2{margin:0 0 10px;font-size:16px}
+.hero{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:16px}
+.big{font-size:clamp(34px,8vw,56px);font-weight:800;letter-spacing:-.02em;line-height:1}
+.mute{color:var(--mute);font-size:13px}.ok{color:var(--pri);font-weight:600}.neg{color:var(--bad)}
+.grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));margin-bottom:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:0}
+.sec{margin-bottom:16px}
+.card b{display:block;font-size:21px;font-weight:700}
+.fund{border-left:5px solid var(--c)}
+.bar{height:6px;background:var(--line);border-radius:3px;margin:6px 0 2px;overflow:hidden}.bar i{display:block;height:100%}
+form{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));align-items:end}
+label{display:grid;gap:3px;font-size:13px;color:var(--mute)}
+input,select,button{font:inherit;padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)}
+input:focus-visible,select:focus-visible,button:focus-visible{outline:2px solid var(--pri);outline-offset:1px}
+button{cursor:pointer;background:var(--pri);color:var(--bg);border:0;font-weight:600}
+button.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+.charts{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));margin-bottom:16px}
+.cv{position:relative;height:260px}
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{padding:8px 6px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+td.n,th.n{text-align:right}
+td button{padding:3px 8px;background:transparent;color:var(--bad);border:1px solid var(--line)}
+.warn{border:1px solid var(--bad);color:var(--bad);border-radius:8px;padding:8px 12px;margin-bottom:12px;display:none;background:var(--card)}
+summary{cursor:pointer;font-weight:600}
+</style>
+</head>
+<body>
+<main>
+<div class="hero">
+  <div><div class="mute">Tiền mặt đang có</div><div class="big" id="cash">0đ</div></div>
+  <div style="text-align:right"><div id="check" class="ok"></div><div class="mute" id="asof"></div></div>
+</div>
+
+<div class="card sec">
+  <div id="cstat" class="mute"></div>
+  <form id="authform" style="margin-top:8px" onsubmit="return false">
+    <label>Email<input id="em" type="email" autocomplete="username"></label>
+    <label>Mật khẩu (từ 6 ký tự)<input id="pw" type="password" autocomplete="current-password"></label>
+    <button type="button" id="login">Đăng nhập</button>
+    <button type="button" id="signup" class="ghost">Tạo tài khoản</button>
+  </form>
+  <button class="ghost" id="logout" style="display:none;margin-top:8px">Đăng xuất</button>
+</div>
+<div class="warn" id="warn"></div>
+
+<div class="grid" id="info"></div>
+<div class="grid" id="funds"></div>
+
+<div class="card sec">
+  <h2>Thêm giao dịch</h2>
+  <div class="row" id="qb"></div>
+  <form id="f">
+    <label>Ngày<input type="date" id="date" required></label>
+    <label>Loại<select id="type">
+      <option value="chi">Chi tiêu</option><option value="thu">Thu nhập</option><option value="chuyen">Chuyển giữa quỹ</option>
+      <option value="no">Ghi nợ ăn trưa (chưa trả)</option><option value="tranno">Trả nợ ăn trưa</option><option value="tk">Chuyển tiết kiệm</option>
+    </select></label>
+    <label id="lc">Hạng mục<select id="cat"></select></label>
+    <label id="lf">Trừ từ quỹ<select id="from"></select></label>
+    <label id="lt">Cộng vào quỹ<select id="to"></select></label>
+    <label>Số tiền (vd 20k, 35000)<input id="amt" required autocomplete="off"></label>
+    <label>Nội dung<input id="note" placeholder="Ăn sáng, xăng..."></label>
+    <button>Ghi sổ</button>
+  </form>
+</div>
+
+<div class="card sec">
+  <h2>Đối chiếu cuối ngày</h2>
+  <div class="row" style="margin:0;align-items:center">
+    <input id="real" placeholder="Tiền mặt thực tế (vd 868k)" autocomplete="off">
+    <button class="ghost" id="rc">Đối chiếu</button>
+    <span id="rres"></span>
+  </div>
+</div>
+
+<div class="row">
+  <button id="bsal">Nhận lương (chia theo kế hoạch)</button>
+  <button class="ghost" id="bnew">Chốt kỳ, mang số dư sang kỳ mới</button>
+  <button class="ghost" id="brst">Làm mới: nhập lại từ số thực tế</button>
+  <button class="ghost" id="exp">Xuất sao lưu</button>
+  <button class="ghost" id="imp">Nhập sao lưu</button>
+  <input type="file" id="file" accept=".json" hidden>
+</div>
+
+<details class="card sec"><summary>Cài đặt: kế hoạch chia quỹ, ngày lương, quy tắc ăn</summary>
+  <form id="set" style="margin-top:12px"></form><div class="mute" id="ptot" style="margin-top:8px"></div>
+</details>
+
+<div class="charts">
+  <div class="card"><h2>Chi theo hạng mục (kỳ này)</h2><div class="cv"><canvas id="c1"></canvas></div></div>
+  <div class="card"><h2>Chi mỗi ngày (14 ngày gần nhất)</h2><div class="cv"><canvas id="c2"></canvas></div></div>
+  <div class="card"><h2>Tiền mặt theo thời gian</h2><div class="cv"><canvas id="c3"></canvas></div></div>
+  <div class="card"><h2>Kế hoạch và đã chi theo quỹ (kỳ này)</h2><div class="cv"><canvas id="c4"></canvas></div></div>
+</div>
+
+<div class="card"><h2>Lịch sử giao dịch (80 gần nhất)</h2>
+<div class="tw"><table><thead><tr><th>Ngày</th><th>Nội dung</th><th>Hạng mục</th><th>Quỹ</th><th class="n">Số tiền</th><th></th></tr></thead><tbody id="tb"></tbody></table></div></div>
+</main>
+
+<script>
+const KEY='so-tien-v1';
+/* Muốn thêm quỹ hoặc hạng mục: sửa 3 hằng số dưới đây */
+const FUNDS=[['tro','Trọ'],['pc','PC'],['tien','Điện, nước, Wi-Fi, rác'],['xang','Xăng'],['xe','Bảo dưỡng xe'],['an','Ăn'],['nolunch','Trả ăn trưa công ty'],['sh','Đồ sinh hoạt'],['suckhoe','Sức khỏe'],['gd','Gia đình'],['tudo','Tự do']].map(([id,n],i)=>({id,n,c:`hsl(${i*33} 58% 48%)`}));
+const CATS=['Ăn sáng','Ăn trưa','Ăn tối/phát sinh','Cafe & nước','Xăng','Bảo dưỡng xe','Sức khỏe','Gia đình','Sinh hoạt','Cá nhân (cắt tóc...)','Hóa đơn','Khác'];
+const CF={'Ăn sáng':'an','Ăn trưa':'an','Ăn tối/phát sinh':'an','Xăng':'xang','Bảo dưỡng xe':'xe','Sức khỏe':'suckhoe','Gia đình':'gd','Sinh hoạt':'sh','Hóa đơn':'tien'};
+const PLAN={tro:1500000,pc:1000000,tien:615000,xang:150000,xe:100000,an:1150000,nolunch:880000,sh:600000,suckhoe:100000,gd:700000,tudo:500000,sav:1705000};
+const TL={chi:'Chi',thu:'Thu nhập',luong:'Nhận lương',chuyen:'Chuyển quỹ',no:'Ghi nợ ăn trưa',tranno:'Trả nợ ăn trưa',tk:'Chuyển tiết kiệm',dc:'Điều chỉnh (chênh lệch chưa xác định nguồn)'};
+const $=i=>document.getElementById(i);
+const fmt=n=>(n<0?'-':'')+Math.abs(n).toLocaleString('vi-VN')+'đ';
+const k=v=>v/1000+'k';
+const parse=s=>{const m=String(s).trim().toLowerCase().replace(/[.,\s]/g,'').match(/^(-?\d+)(k|tr)?$/);return m?+m[1]*(m[2]=='k'?1e3:m[2]=='tr'?1e6:1):NaN};
+const dstr=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+const today=()=>dstr(new Date());
+const vd=d=>d.split('-').reverse().join('/');
+const fn=id=>(FUNDS.find(x=>x.id==id)||{}).n||'—';
+const hue=i=>`hsl(${i*37} 60% 50%)`;
+
+function norm(s){
+  if(s&&s.v==2)return s;
+  const o=(s&&s.open)||{},f={};FUNDS.forEach(x=>f[x.id]=0);f.an=o.an||0;f.xang=o.xang||0;f.tudo=o.tudo||0;
+  return{v:2,open:{date:o.date||today(),f,sav:o.sav||0,debt:o.debt||0},txs:(s&&s.txs)||[],plan:{...PLAN},pay:5,goal:5100000,rules:{sang:20000,truaCT:40000,thu5:30000,cn:50000},arch:[]};
+}
+let S;try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){}
+S=norm(S||{open:{date:'2026-10-18',an:568000,xang:100000,tudo:200000,sav:1000000,debt:400000},txs:[]});
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}cloudPush()};
+
+function pstart(){const t=new Date(),p=S.pay||5;return dstr(new Date(t.getFullYear(),t.getMonth()-(t.getDate()<p?1:0),p))}
+function daysLeft(){const t=new Date(),p=S.pay||5,n=new Date(t.getFullYear(),t.getMonth()+(t.getDate()<p?0:1),p);return Math.max(1,Math.ceil((n-new Date(t.getFullYear(),t.getMonth(),t.getDate()))/864e5))}
+
+function calc(){
+  const o=S.open,f={...o.f};FUNDS.forEach(x=>{if(f[x.id]==null)f[x.id]=0});
+  let sav=o.sav,debt=o.debt;const sum=()=>FUNDS.reduce((a,x)=>a+f[x.id],0);
+  let chk=sum();const ps=pstart();
+  const R={f,spent:{},cat:{},daily:{},inc:0,out:0,line:[[o.date,chk]]};FUNDS.forEach(x=>R.spent[x.id]=0);
+  const list=[...S.txs].sort((a,b)=>a.date.localeCompare(b.date)||a.id-b.id);
+  for(const t of list){
+    const a=t.amt,inP=t.date>=ps;
+    const spend=()=>{const c=t.cat||(t.type=='tranno'?'Trả nợ ăn trưa':'Khác');f[t.from]-=a;chk-=a;if(inP){R.spent[t.from]+=a;R.out+=a;R.cat[c]=(R.cat[c]||0)+a;R.daily[t.date]=(R.daily[t.date]||0)+a}};
+    if(t.type=='chi')spend();
+    else if(t.type=='tranno'){debt-=a;spend()}
+    else if(t.type=='thu'){f[t.to]+=a;chk+=a;if(inP)R.inc+=a}
+    else if(t.type=='luong'){for(const id in t.alloc)f[id]+=t.alloc[id];sav+=t.sav;chk+=a-t.sav;if(inP)R.inc+=a}
+    else if(t.type=='chuyen'){f[t.from]-=a;f[t.to]+=a}
+    else if(t.type=='no')debt+=a;
+    else if(t.type=='tk'){f[t.from]-=a;sav+=a;chk-=a}
+    else if(t.type=='dc'){f[t.to]+=a;chk+=a}
+    R.line.push([t.date,sum()]);
+  }
+  return Object.assign(R,{cash:sum(),chk,sav,debt,list});
+}
+
+let ch={};
+function chart(id,cfg,legend){
+  const st=getComputedStyle(document.body);Chart.defaults.color=st.getPropertyValue('--ink');Chart.defaults.font.family='"Be Vietnam Pro",system-ui';
+  if(ch[id])ch[id].destroy();const ln=st.getPropertyValue('--line');
+  cfg.options={responsive:true,maintainAspectRatio:false,plugins:{legend:{display:!!legend}}};
+  if(cfg.type!='doughnut')cfg.options.scales={x:{grid:{color:ln}},y:{grid:{color:ln},ticks:{callback:v=>v/1000+'k'}}};
+  ch[id]=new Chart($(id),cfg);
+}
+const card=(l,v,s,c)=>`<div class="card"><span class="mute">${l}</span><b class="${c||''}">${v}</b>${s||''}</div>`;
+const bar=(r,col)=>`<div class="bar"><i style="width:${Math.min(100,Math.max(0,r*100))}%;background:${col}"></i></div>`;
+
+function render(){
+  const R=calc(),ps=pstart(),dl=daysLeft(),prev=S.arch[S.arch.length-1],pri=getComputedStyle(document.body).getPropertyValue('--pri');
+  $('cash').textContent=fmt(R.cash);
+  $('check').textContent=R.cash==R.chk?'✓ Sổ khớp: tiền mặt = tổng các quỹ':'Lệch '+fmt(R.cash-R.chk);
+  $('asof').textContent='Kỳ lương từ '+vd(ps)+', còn '+dl+' ngày đến ngày lương';
+  const date=$('date').value||today(),dw=new Date(date+'T00:00').getDay();
+  const lim=dw==0?S.rules.cn:S.rules.sang+(dw==4?S.rules.thu5:0);
+  const ate=S.txs.filter(t=>t.date==date&&t.type=='chi'&&t.from=='an').reduce((a,t)=>a+t.amt,0);
+  const per=Math.max(0,Math.floor(R.f.tudo/dl/1000)*1000),gap=R.debt-R.f.nolunch;
+  $('info').innerHTML=
+    card('Tiết kiệm',fmt(R.sav),bar(R.sav/S.goal,pri)+`<span class="mute">Mục tiêu quỹ khẩn cấp ${fmt(S.goal)} (${Math.round(R.sav/S.goal*100)}%)</span>`)+
+    card('Nợ ăn trưa công ty (chưa trả)',fmt(R.debt),`<span class="mute ${gap>0?'neg':''}">${gap>0?'Quỹ dành trả đang thiếu '+fmt(gap):'Quỹ dành trả đã đủ'}</span>`)+
+    card('Thu kỳ này',fmt(R.inc))+
+    card('Chi kỳ này',fmt(R.out),`<span class="mute">${prev?'Kỳ trước '+fmt(prev.out)+', '+(R.out>prev.out?'cao hơn ':'thấp hơn ')+fmt(Math.abs(R.out-prev.out)):'Chưa có kỳ trước để so sánh'}</span>`)+
+    card('Quỹ tự do mỗi ngày',fmt(per),`<span class="mute">Còn ${fmt(R.f.tudo)} cho ${dl} ngày</span>`)+
+    card('Ăn ngày '+vd(date),fmt(ate)+' / '+fmt(lim),bar(ate/lim,ate>lim?'var(--bad)':pri),ate>lim?'neg':'');
+  $('funds').innerHTML=FUNDS.map(x=>{const p=S.plan[x.id]||0,s=R.spent[x.id],r=p?s/p:0;
+    return `<div class="card fund" style="--c:${x.c}"><span class="mute">${x.n}</span><b class="${R.f[x.id]<0?'neg':''}">${fmt(R.f[x.id])}</b>${p?bar(r,r>1?'var(--bad)':r>.8?'var(--warn)':x.c)+`<span class="mute">Đã chi ${fmt(s)} / ${fmt(p)}</span>`:''}</div>`}).join('');
+  const neg=FUNDS.filter(x=>R.f[x.id]<0);
+  $('warn').style.display=neg.length?'block':'none';
+  $('warn').textContent=neg.length?'Đang âm: '+neg.map(x=>x.n+' '+fmt(R.f[x.id])).join(', ')+'. Hãy chuyển quỹ hoặc ghi thêm thu nhập.':'';
+  $('tb').innerHTML=[...R.list].reverse().slice(0,80).map(t=>`<tr><td>${vd(t.date)}</td><td>${t.note||'—'}</td><td>${t.cat||(t.type=='chi'?'—':TL[t.type])}</td><td>${t.type=='chuyen'?fn(t.from)+' → '+fn(t.to):t.type=='luong'?'Chia theo kế hoạch':t.type=='no'?'—':fn(t.from||t.to)}</td><td class="n ${['thu','luong'].includes(t.type)||t.type=='dc'&&t.amt>0?'ok':''}">${fmt(t.amt)}</td><td><button data-id="${t.id}" aria-label="Xóa">Xóa</button></td></tr>`).join('')||'<tr><td colspan="6" class="mute">Chưa có giao dịch. Nhập khoản đầu tiên ở phía trên.</td></tr>';
+  const cats=Object.keys(R.cat);
+  chart('c1',{type:'doughnut',data:{labels:cats,datasets:[{data:cats.map(c=>R.cat[c]),backgroundColor:cats.map((c,i)=>hue(i)),borderWidth:0}]}},1);
+  const days=[];for(let i=13;i>=0;i--){const d=new Date();d.setDate(d.getDate()-i);days.push(dstr(d))}
+  chart('c2',{type:'bar',data:{labels:days.map(d=>vd(d).slice(0,5)),datasets:[{data:days.map(d=>R.daily[d]||0),backgroundColor:pri}]}});
+  const bd={};R.line.forEach(([d,v])=>bd[d]=v);const ds=Object.keys(bd).sort();
+  chart('c3',{type:'line',data:{labels:ds.map(d=>vd(d).slice(0,5)),datasets:[{data:ds.map(d=>bd[d]),borderColor:pri,backgroundColor:pri,tension:.25}]}});
+  chart('c4',{type:'bar',data:{labels:FUNDS.map(x=>x.n),datasets:[{label:'Kế hoạch',data:FUNDS.map(x=>S.plan[x.id]||0),backgroundColor:'#94a3b8'},{label:'Đã chi',data:FUNDS.map(x=>R.spent[x.id]),backgroundColor:pri}]}},1);
+  qb();if(!$('set').contains(document.activeElement))setHTML();
+}
+
+function setHTML(){
+  const rows=[...FUNDS.map(x=>['p:'+x.id,'Kế hoạch: '+x.n,S.plan[x.id]||0]),['p:sav','Kế hoạch: tiết kiệm',S.plan.sav],['goal','Mục tiêu quỹ khẩn cấp',S.goal],['pay','Ngày nhận lương (1-28)',S.pay],['r:sang','Ăn sáng mỗi bữa',S.rules.sang],['r:truaCT','Trưa công ty (ghi nợ)',S.rules.truaCT],['r:thu5','Trưa Thứ 5 tối đa',S.rules.thu5],['r:cn','Chủ nhật tối đa/ngày',S.rules.cn]];
+  $('set').innerHTML=rows.map(([key,l,v])=>`<label>${l}<input data-k="${key}" value="${v}"></label>`).join('');
+  const tot=FUNDS.reduce((a,x)=>a+(S.plan[x.id]||0),0)+S.plan.sav;$('ptot').textContent='Tổng kế hoạch mỗi kỳ lương: '+fmt(tot);
+}
+$('set').onchange=e=>{const key=e.target.dataset.k,v=parse(e.target.value);if(!key||isNaN(v))return alert('Số chưa hợp lệ.');
+  if(key.startsWith('p:'))S.plan[key.slice(2)]=v;else if(key.startsWith('r:'))S.rules[key.slice(2)]=v;else S[key]=v;save();render()};
+
+function opts(){const h=FUNDS.map(x=>`<option value="${x.id}">${x.n}</option>`).join('');$('from').innerHTML=h;$('to').innerHTML=h;$('from').value='an';$('to').value='tudo';$('cat').innerHTML=CATS.map(c=>`<option>${c}</option>`).join('')}
+function vis(){const t=$('type').value;$('lf').style.display=['chi','chuyen','tranno','tk'].includes(t)?'':'none';$('lt').style.display=['thu','chuyen'].includes(t)?'':'none';$('lc').style.display=t=='chi'?'':'none';if(t=='tranno')$('from').value='nolunch'}
+$('type').onchange=vis;$('cat').onchange=()=>{$('from').value=CF[$('cat').value]||'tudo'};$('date').onchange=render;
+const add=t=>{S.txs.push({id:Date.now()+Math.floor(Math.random()*999),...t});save();render()};
+$('f').onsubmit=e=>{e.preventDefault();const a=parse($('amt').value),t=$('type').value;
+  if(!(a>0))return alert('Số tiền chưa hợp lệ. Nhập ví dụ 20k hoặc 35000.');
+  if(t=='chuyen'&&$('from').value==$('to').value)return alert('Quỹ nguồn và quỹ đích đang giống nhau.');
+  add({date:$('date').value,type:t,amt:a,from:$('from').value,to:$('to').value,cat:t=='chi'?$('cat').value:'',note:$('note').value.trim()});
+  $('amt').value='';$('note').value='';$('amt').focus()};
+const QB=()=>[{t:'Sáng '+k(S.rules.sang),type:'chi',amt:S.rules.sang,from:'an',cat:'Ăn sáng',note:'Ăn sáng'},{t:'Trưa công ty '+k(S.rules.truaCT)+' (ghi nợ)',type:'no',amt:S.rules.truaCT,note:'Ăn trưa công ty'},{t:'Trưa Thứ 5 '+k(S.rules.thu5),type:'chi',amt:S.rules.thu5,from:'an',cat:'Ăn trưa',note:'Ăn trưa'}];
+function qb(){$('qb').innerHTML=QB().map((b,i)=>`<button class="ghost" data-i="${i}">${b.t}</button>`).join('')}
+$('qb').onclick=e=>{const b=QB()[e.target.dataset.i];if(b){const{t,...x}=b;add({date:$('date').value,...x})}};
+$('tb').onclick=e=>{const id=e.target.dataset.id;if(id&&confirm('Xóa giao dịch này?')){S.txs=S.txs.filter(t=>t.id!=id);save();render()}};
+
+let pd=0;
+$('rc').onclick=()=>{const a=parse($('real').value);if(isNaN(a))return alert('Số tiền chưa hợp lệ.');const c=calc().cash;pd=a-c;
+  $('rres').innerHTML=pd?`Sổ ghi ${fmt(c)}, thực tế ${fmt(a)}, lệch <b class="neg" style="display:inline;font-size:inherit">${fmt(pd)}</b> <button id="rfix">Ghi điều chỉnh vào quỹ tự do</button>`:'<span class="ok">Khớp, không lệch.</span>'};
+$('rres').onclick=e=>{if(e.target.id=='rfix'&&pd){add({date:today(),type:'dc',amt:pd,to:'tudo',note:'Chênh lệch chưa xác định nguồn'});pd=0;$('rres').textContent='Đã ghi điều chỉnh.';$('real').value=''}};
+
+$('bsal').onclick=()=>{
+  const tot=FUNDS.reduce((a,x)=>a+(S.plan[x.id]||0),0)+S.plan.sav,v=prompt('Số lương nhận được (kế hoạch '+fmt(tot)+'):',tot);if(v===null)return;
+  const a=parse(v);if(!(a>0))return alert('Số tiền chưa hợp lệ.');
+  const alloc={};FUNDS.forEach(x=>alloc[x.id]=S.plan[x.id]||0);alloc.tudo+=a-tot;
+  if(alloc.tudo<0&&!confirm('Lương thấp hơn kế hoạch, quỹ tự do sẽ nhận '+fmt(alloc.tudo)+'. Tiếp tục?'))return;
+  add({date:$('date').value,type:'luong',amt:a,alloc,sav:S.plan.sav,note:'Nhận lương'});
+};
+function closeP(R,f,sav,debt){
+  S.arch.push({label:vd(pstart())+' - '+vd(today()),inc:R.inc,out:R.out,cat:R.cat});
+  S.open={date:today(),f,sav,debt};S.txs=[];save();render();
+}
+$('bnew').onclick=()=>{if(!confirm('Chốt kỳ và mang toàn bộ số dư hiện tại sang kỳ mới? Giao dịch cũ sẽ được lưu tóm tắt để so sánh.'))return;const R=calc();closeP(R,{...R.f},R.sav,R.debt)};
+$('brst').onclick=()=>{
+  if(!confirm('Làm mới sẽ xóa giao dịch cũ (lưu tóm tắt) và nhập lại số dư theo thực tế. Tiếp tục?'))return;
+  const R=calc(),g=(m,d)=>{const v=prompt(m,d);return v===null?NaN:parse(v)};
+  const cash=g('Tiền mặt thực tế đang có:',R.cash),sav=g('Tiết kiệm thực tế:',R.sav),debt=g('Nợ ăn trưa công ty hiện tại:',R.debt);
+  if([cash,sav,debt].some(isNaN))return alert('Đã hủy vì có số chưa hợp lệ.');
+  const f={};FUNDS.forEach(x=>f[x.id]=0);
+  if(confirm('Chia số tiền mặt vào các quỹ theo tỷ lệ kế hoạch? Chọn Hủy để dồn hết vào quỹ tự do.')){
+    const tot=FUNDS.reduce((a,x)=>a+(S.plan[x.id]||0),0)||1;let s=0;
+    FUNDS.forEach(x=>{f[x.id]=Math.floor(cash*(S.plan[x.id]||0)/tot/1000)*1000;s+=f[x.id]});f.tudo+=cash-s;
+  }else f.tudo=cash;
+  closeP(R,f,sav,debt);
+};
+$('exp').onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(S,null,1)],{type:'application/json'}));a.download='so-tien-'+today()+'.json';a.click()};
+$('imp').onclick=()=>$('file').click();
+$('file').onchange=e=>{const r=new FileReader();r.onload=()=>{try{const j=JSON.parse(r.result);if(!j.open||!j.txs)throw 0;S=norm(j);save();render()}catch(x){alert('File sao lưu không đúng định dạng.')}};r.readAsText(e.target.files[0])};
+
+/* ===== ĐỒNG BỘ FIREBASE ===== */
+const FIREBASE_CONFIG={apiKey:"AIzaSyBxYcZ91BKifVsZu_wiWh5kul4Do3N5QvM",authDomain:"sotienaki.firebaseapp.com",projectId:"sotienaki",appId:"1:1090136053019:web:392fc66abd4ebc3ec22fbe"};
+let auth=null,db=null,uid=null,unsub=null,lastJson='';
+const setStat=m=>{$('cstat').textContent=m};
+const nowT=()=>new Date().toLocaleTimeString('vi-VN');
+function cloudInit(){
+  if(!FIREBASE_CONFIG.apiKey||typeof firebase==='undefined'){setStat('Chưa bật đồng bộ: dữ liệu chỉ lưu trên máy này.');$('authform').style.display='none';return}
+  firebase.initializeApp(FIREBASE_CONFIG);auth=firebase.auth();db=firebase.firestore();
+  auth.onAuthStateChanged(u=>{
+    if(unsub){unsub();unsub=null}
+    if(!u){uid=null;lastJson='';$('authform').style.display='';$('logout').style.display='none';setStat('Chưa đăng nhập. Đăng nhập để đồng bộ giữa các máy.');return}
+    uid=u.uid;$('authform').style.display='none';$('logout').style.display='';setStat('Đang kết nối: '+u.email);
+    unsub=db.collection('ledgers').doc(uid).onSnapshot(snap=>{
+      if(!snap.exists){cloudPush();return}
+      if(snap.metadata.hasPendingWrites)return;
+      const j=snap.data().data;if(j===lastJson){setStat('Đã đồng bộ ('+u.email+') lúc '+nowT());return}
+      try{S=norm(JSON.parse(j));lastJson=j;try{localStorage.setItem(KEY,j)}catch(e){}render();setStat('Đã đồng bộ ('+u.email+') lúc '+nowT())}catch(e){setStat('Dữ liệu trên đám mây bị lỗi định dạng.')}
+    },err=>setStat('Lỗi đồng bộ: '+err.message));
+  });
+  $('login').onclick=()=>auth.signInWithEmailAndPassword($('em').value.trim(),$('pw').value).catch(e=>alert('Đăng nhập chưa được: '+e.message));
+  $('signup').onclick=()=>auth.createUserWithEmailAndPassword($('em').value.trim(),$('pw').value).catch(e=>alert('Tạo tài khoản chưa được: '+e.message));
+  $('logout').onclick=()=>auth.signOut();
+}
+function cloudPush(){
+  if(!uid)return;const j=JSON.stringify(S);if(j===lastJson)return;lastJson=j;
+  db.collection('ledgers').doc(uid).set({data:j,updated:Date.now()}).then(()=>setStat('Đã lưu lên đám mây lúc '+nowT())).catch(e=>setStat('Lỗi lưu: '+e.message));
+}
+$('date').value=today();opts();vis();qb();render();cloudInit();
+</script>
+</body>
+</html>
